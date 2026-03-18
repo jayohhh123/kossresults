@@ -1997,14 +1997,10 @@
 
   function renderTable(tbodyId, rows, activeRowClass) {
     const el = document.getElementById(tbodyId);
+    const rowClasses = ['row-safe', 'row-caution', 'row-danger', 'row-severe'];
     el.innerHTML = rows.map((r, i) => {
-      const cls = r.level.replace(/\s/g, '') === activeRowClass.replace('row-', '') ? '' : '';
-      // 하이라이트는 activeRowClass 기준으로 판별
-      const isActive = (i === rows.findIndex((_, j) => {
-        const level = rows[j];
-        return activeRowClass === ['row-safe','row-caution','row-danger','row-severe'][j];
-      }));
-      return `<tr class="${activeRowClass === ['row-safe','row-caution','row-danger','row-severe'][i] ? activeRowClass : ''}">
+      const cls = rowClasses[i] === activeRowClass ? activeRowClass : '';
+      return `<tr class="${cls}">
         <td>${r.range}</td><td>${r.level}</td><td>${r.desc}</td>
       </tr>`;
     }).join('');
