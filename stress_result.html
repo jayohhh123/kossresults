@@ -1429,7 +1429,33 @@
       pointer-events: none;
     }
 
-    /* ── 카운트다운 (파동 영역 내부) ─────────── */
+    /* 얼굴 측정 카운트다운 오버레이 */
+    .face-countdown-overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 28px;
+      z-index: 5;
+      background: rgba(0,0,0,0.15);
+    }
+    .face-countdown-overlay.active { display: flex; }
+    .face-countdown-num {
+      font-size: 96px;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1;
+      letter-spacing: -2px;
+      text-shadow: 0 2px 16px rgba(0,0,0,0.4);
+      animation: faceCountPop 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    @keyframes faceCountPop {
+      0%   { transform: scale(0.4); opacity: 0; filter: blur(6px); }
+      70%  { filter: blur(0px); }
+      100% { transform: scale(1);   opacity: 1; }
+    }
     .voice-countdown-overlay {
       display: none;
       position: absolute;
@@ -2553,12 +2579,17 @@
           <div class="face-error-icon">📷</div>
           <p class="face-error-text">카메라를 사용할 수 없어요.<br>브라우저 설정에서 카메라 권한을 허용해 주세요.</p>
         </div>
+
+        <!-- 카운트다운 오버레이 -->
+        <div class="face-countdown-overlay" id="face-countdown-overlay">
+          <span class="face-countdown-num" id="face-countdown-num">3</span>
+        </div>
       </div>
 
       <!-- 하단 안내 -->
       <div class="face-bottom-body">
-        <p class="face-bottom-label" id="face-bottom-label">얼굴을 프레임 안에 맞춘 후</p>
-        <p class="face-bottom-text">하단 시작하기 버튼을 눌러주세요.</p>
+        <p class="face-bottom-label" id="face-bottom-label">얼굴을 프레임 안에 맞춰주세요</p>
+        <p class="face-bottom-text" id="face-bottom-sub">하단 시작하기 버튼을 눌러주세요.</p>
       </div>
       <div class="ai-bottom-wrap">
         <button class="bottom-btn face-inactive" id="face-start-btn" onclick="confirmFaceDetected()">측정 시작하기</button>
@@ -2985,9 +3016,52 @@
     faceDetected = false;
   }
 
+  let faceCountdownTimer = null;
+
   function confirmFaceDetected() {
-    stopFaceDetection();
-    alert('얼굴 측정을 시작합니다.');
+    if (faceCountdownTimer) return;
+    // 버튼 비활성, 하단 텍스트 변경
+    document.getElementById('face-start-btn').disabled = true;
+    document.getElementById('face-start-btn').style.opacity = '0.5';
+    document.getElementById('face-bottom-label').textContent = '측정이 곧 시작됩니다';
+    document.getElementById('face-bottom-label').style.color = '#2f6c46';
+    startFaceCountdown();
+  }
+
+  function startFaceCountdown() {
+    let count = 3;
+    const overlay = document.getElementById('face-countdown-overlay');
+    const numEl = document.getElementById('face-countdown-num');
+
+    overlay.classList.add('active');
+    numEl.textContent = count;
+    document.getElementById('face-bottom-label').textContent = `${count}초 후 측정이 시작됩니다`;
+    document.getElementById('face-bottom-label').style.color = '#2f6c46';
+
+    faceCountdownTimer = setInterval(() => {
+      count--;
+      if (count > 0) {
+        numEl.style.animation = 'none';
+        void numEl.offsetWidth;
+        numEl.style.animation = 'faceCountPop 0.4s cubic-bezier(0.22, 1, 0.36, 1)';
+        numEl.textContent = count;
+        document.getElementById('face-bottom-label').textContent = `${count}초 후 측정이 시작됩니다`;
+      } else {
+        clearInterval(faceCountdownTimer);
+        faceCountdownTimer = null;
+        overlay.classList.remove('active');
+        document.getElementById('face-bottom-label').textContent = '잘 측정되고 있어요!';
+        document.getElementById('face-bottom-sub').textContent = '지금처럼 화면을 계속 바라보세요.';
+      }
+    }, 1000);
+  }
+
+  function stopFaceDetection() {
+    if (faceDetectionLoop) { cancelAnimationFrame(faceDetectionLoop); faceDetectionLoop = null; }
+    if (faceDetector) { faceDetector.close(); faceDetector = null; }
+    if (faceCountdownTimer) { clearInterval(faceCountdownTimer); faceCountdownTimer = null; }
+    document.getElementById('face-countdown-overlay')?.classList.remove('active');
+    faceDetected = false;
   }
 
   function showFaceGuide() {
