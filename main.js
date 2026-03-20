@@ -2,7 +2,6 @@
     const card = headerEl.closest('.section-card');
     const isExpanded = card.classList.contains('expanded');
 
-    // Close all cards first
     document.querySelectorAll('.section-card').forEach(c => {
       const h = c.querySelector('.card-header');
       const ch = c.querySelector('.chevron');
@@ -13,7 +12,6 @@
       ch.classList.remove('up');
     });
 
-    // If the clicked card was closed, open it
     if (!isExpanded) {
       const chevron = headerEl.querySelector('.chevron');
       card.classList.remove('collapsed');
@@ -76,7 +74,6 @@
 
     setMicBtnState('counting');
 
-    // 파동 숨기고 카운트다운 노출
     waveform.style.visibility = 'hidden';
     overlay.classList.add('active');
     numEl.textContent = count;
@@ -94,7 +91,6 @@
         clearInterval(countdownTimer);
         countdownTimer = null;
         overlay.classList.remove('active');
-        // 파동 다시 보이기
         waveform.style.visibility = 'visible';
         beginRecording();
       }
@@ -109,14 +105,11 @@
     document.getElementById('voice-guide-label').innerHTML =
       '문장을 모두 읽었다면,<br>녹음 마치기 버튼을 눌러주세요.';
 
-    // 텍스트 전환: base 숨기고 fill 표시
     document.getElementById('voice-sentence-base').style.display = 'none';
     const fillEl = document.getElementById('voice-sentence-fill');
     fillEl.style.display = 'block';
 
     setMicBtnState('stop-inactive');
-
-    // 글자별 채움
     startCharFill(fillEl);
   }
 
@@ -125,9 +118,7 @@
     const total = chars.length;
     if (total === 0) return;
 
-    // 글자당 고정 딜레이 160ms
     const interval = 160;
-
     chars.forEach((ch, i) => {
       setTimeout(() => {
         ch.classList.add('lit');
@@ -142,21 +133,19 @@
   }
 
   function resetToIdle() {
+    const waveform = document.getElementById('voice-waveform');
     document.getElementById('voice-sentence-base').style.display = 'block';
     document.getElementById('voice-sentence-fill').style.display = 'none';
-    document.getElementById('voice-waveform').style.visibility = 'visible';
+    waveform.style.visibility = 'visible';
     setMicBtnState('mic');
-    document.getElementById('voice-waveform').classList.remove('recording');
+    waveform.classList.remove('recording');
     document.getElementById('voice-countdown-overlay').classList.remove('active');
   }
 
   function updateSentenceText() {
     const raw = sentences[currentSentence];
-    // base: 검정 일반 텍스트
-    document.getElementById('voice-sentence-base').innerHTML =
-      raw.replace(/\n/g, '<br>');
+    document.getElementById('voice-sentence-base').innerHTML = raw.replace(/\n/g, '<br>');
 
-    // fill: 글자마다 span.char (줄바꿈은 <br> 유지)
     const fillEl = document.getElementById('voice-sentence-fill');
     fillEl.innerHTML = raw.split('').map(ch => {
       if (ch === '\n') return '<br>';
@@ -174,7 +163,6 @@
 
   function clearAllTimers() {
     if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
-    // fillTimer는 setTimeout 여러 개라 일괄 제거 불가 → 플래그로 처리
     if (fillTimer) { clearTimeout(fillTimer); fillTimer = null; }
     document.getElementById('voice-countdown-overlay').classList.remove('active');
     const waveform = document.getElementById('voice-waveform');
@@ -209,7 +197,6 @@
       stopIcon.style.display = 'block';
       btn.classList.add('stop-active');
     }
-    // 'mic': 기본값 유지
   }
 
   function finishCurrentSentence() {
@@ -225,7 +212,6 @@
         '녹음하기 버튼을 누른 후,<br>아래 문장을 따라 읽어주세요.';
       resetToIdle();
     } else {
-      // 음성 측정 완료 → 얼굴 측정 안내로 전환
       resetToIdle();
       setTimeout(() => showFaceGuide(), 400);
     }
@@ -243,12 +229,11 @@
   let faceLottie = null;
 
   let faceStream = null;
-  let faceLandmarker = null;      // FaceDetector → FaceLandmarker
+  let faceLandmarker = null;
   let faceDetectionLoop = null;
   let faceDetected = false;
-  let faceMeasuring = false;      // 30초 측정 진행 중 플래그
+  let faceMeasuring = false;
 
-  // dim: 프레임 실제 위치 기준으로 4개 패널을 배치해 구멍을 만듦
   function updateDimClip() {
     const dimEl   = document.getElementById('face-frame-dim');
     const frameEl = document.getElementById('face-frame');
@@ -262,12 +247,10 @@
     const top    = Math.round(frameRect.top    - wrapRect.top);
     const right  = Math.round(wrapRect.right   - frameRect.right);
     const bottom = Math.round(wrapRect.bottom  - frameRect.bottom);
-    const fW     = Math.round(frameRect.width);
     const fH     = Math.round(frameRect.height);
 
     const color  = 'rgba(0,0,0,0.50)';
 
-    // 4개 패널 HTML로 구멍 영역을 비워 둠
     dimEl.innerHTML = `
       <div style="position:absolute;top:0;left:0;right:0;height:${top}px;background:${color};"></div>
       <div style="position:absolute;bottom:0;left:0;right:0;height:${bottom}px;background:${color};"></div>
@@ -278,26 +261,25 @@
 
   async function startFaceRecord() {
     document.getElementById('ai-view-face').style.display = 'none';
-    const faceRecordView = document.getElementById('ai-view-face-record');
-    faceRecordView.style.display = 'flex';
+    document.getElementById('ai-view-face-record').style.display = 'flex';
 
-    // 헤더 + 탭 숨김 (풀스크린)
     document.querySelector('.phone').classList.add('face-fullscreen');
     window.scrollTo(0, 0);
 
-    // 초기 상태 리셋
     faceDetected = false;
+    const startBtn = document.getElementById('face-start-btn');
+    const bottomLabel = document.getElementById('face-bottom-label');
     document.getElementById('face-loading-overlay').style.display = 'flex';
     document.getElementById('face-frame-overlay').style.display = 'none';
     document.getElementById('face-frame-dim').style.display = 'none';
     document.getElementById('face-error-overlay').style.display = 'none';
     document.getElementById('face-camera-feed').style.display = 'none';
-    document.getElementById('face-start-btn').classList.add('face-inactive');
-    document.getElementById('face-start-btn').disabled = false;
-    document.getElementById('face-start-btn').style.opacity = '';
+    startBtn.classList.add('face-inactive');
+    startBtn.disabled = false;
+    startBtn.style.opacity = '';
     document.getElementById('face-frame').classList.remove('detected');
-    document.getElementById('face-bottom-label').textContent = '얼굴을 프레임 안에 맞춰주세요';
-    document.getElementById('face-bottom-label').style.color = '';
+    bottomLabel.textContent = '얼굴을 프레임 안에 맞춰주세요';
+    bottomLabel.style.color = '';
     document.getElementById('face-bottom-sub').textContent = '하단 시작하기 버튼을 눌러주세요.';
 
     try {
@@ -312,7 +294,6 @@
         video.style.display = 'block';
         document.getElementById('face-frame-dim').style.display = 'block';
         document.getElementById('face-frame-overlay').style.display = 'flex';
-        // 프레임 실제 위치 계산 후 dim clip-path 설정
         requestAnimationFrame(() => updateDimClip());
         await initFaceDetection(video);
       };
@@ -332,7 +313,6 @@
   }
 
   async function initFaceDetection(video) {
-    // FaceLandmarker 모듈 로드 대기
     let attempts = 0;
     while (!window._FaceLandmarker && attempts < 30) {
       await new Promise(r => setTimeout(r, 200));
@@ -367,7 +347,6 @@
     }
   }
 
-  // canvas 크기를 camera wrap에 맞게 동기화
   function syncCanvasSize() {
     const canvas = document.getElementById('face-landmark-canvas');
     const video = document.getElementById('face-camera-feed');
@@ -381,26 +360,25 @@
   function drawLandmarks(ctx, landmarks, w, h) {
     ctx.clearRect(0, 0, w, h);
 
-    // 접속선 — 삼각망(tessellation)
+    const t = performance.now() / 1000;
+    const pulse = 0.65 + 0.35 * Math.sin(t * Math.PI * 1.25);
+
     const conns = (window._FaceLandmarker && window._FaceLandmarker.FACE_LANDMARKS_TESSELATION) || [];
-    ctx.strokeStyle = 'rgba(140,203,164,0.35)';
-    ctx.lineWidth = 0.6;
+    ctx.strokeStyle = `rgba(255,255,255,${0.18 * pulse})`;
+    ctx.lineWidth = 0.5;
     ctx.beginPath();
     for (const { start, end } of conns) {
       const s = landmarks[start];
       const e = landmarks[end];
       if (!s || !e) continue;
-      // video는 CSS scaleX(-1)로 미러됨 → canvas도 같은 scaleX(-1) 변환
-      // canvas transform은 CSS에서 처리하므로 좌표 그대로 사용
       ctx.moveTo(s.x * w, s.y * h);
       ctx.lineTo(e.x * w, e.y * h);
     }
     ctx.stroke();
 
-    // 외곽선 — 얼굴 윤곽
     const contour = (window._FaceLandmarker && window._FaceLandmarker.FACE_LANDMARKS_FACE_OVAL) || [];
-    ctx.strokeStyle = 'rgba(140,203,164,0.75)';
-    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = `rgba(255,255,255,${0.55 * pulse})`;
+    ctx.lineWidth = 1.2;
     ctx.beginPath();
     for (let i = 0; i < contour.length; i++) {
       const { start, end } = contour[i];
@@ -412,11 +390,17 @@
     }
     ctx.stroke();
 
-    // 랜드마크 점
-    ctx.fillStyle = 'rgba(140,203,164,0.8)';
-    for (const lm of landmarks) {
+    const keyPoints = new Set([1, 4, 5, 6, 195, 197, 0, 17, 61, 291, 78, 308, 33, 263, 133, 362]);
+    const total = landmarks.length;
+    for (let i = 0; i < total; i++) {
+      const lm = landmarks[i];
+      const phase = (i / total) * Math.PI * 4;
+      const wave = 0.5 + 0.5 * Math.sin(t * Math.PI * 1.5 - phase);
+      const opacity = 0.3 + 0.7 * wave;
+      const radius = keyPoints.has(i) ? 1.8 : 0.9;
+      ctx.fillStyle = `rgba(255,255,255,${opacity})`;
       ctx.beginPath();
-      ctx.arc(lm.x * w, lm.y * h, 0.9, 0, Math.PI * 2);
+      ctx.arc(lm.x * w, lm.y * h, radius, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -440,14 +424,12 @@
       const hasLandmarks = results.faceLandmarks && results.faceLandmarks.length > 0;
 
       if (hasLandmarks) {
-        // 랜드마크 그리기 (측정 중이거나 canvas가 보일 때)
         if (canvas.classList.contains('visible')) {
           drawLandmarks(ctx, results.faceLandmarks[0], w, h);
         } else {
           ctx.clearRect(0, 0, w, h);
         }
 
-        // 첫 번째 랜드마크로 얼굴 bbox 추정 (x, y 범위)
         const lms = results.faceLandmarks[0];
         let minX = 1, maxX = 0, minY = 1, maxY = 0;
         for (const lm of lms) {
@@ -457,11 +439,9 @@
           if (lm.y > maxY) maxY = lm.y;
         }
         const fw = maxX - minX;
-        const fh = maxY - minY;
         const faceCx = (minX + maxX) / 2;
         const faceCy = (minY + maxY) / 2;
 
-        // 프레임 영역
         const frameW = 0.65;
         const frameH = frameW * (4 / 3);
         const frameX = (1 - frameW) / 2;
@@ -480,6 +460,11 @@
           document.getElementById('face-start-btn').classList.add('face-inactive');
           document.getElementById('face-bottom-label').textContent = '얼굴을 프레임 안에 맞춰주세요';
         }
+
+        if (faceMeasuring) {
+          if (!inFrame) setFaceLost(true);
+          else setFaceLost(false);
+        }
       } else {
         ctx.clearRect(0, 0, w, h);
         if (faceDetected && !faceMeasuring) {
@@ -488,6 +473,7 @@
           document.getElementById('face-start-btn').classList.add('face-inactive');
           document.getElementById('face-bottom-label').textContent = '얼굴을 프레임 안에 맞춰주세요';
         }
+        if (faceMeasuring) setFaceLost(true);
       }
 
       faceDetectionLoop = requestAnimationFrame(detect);
@@ -504,15 +490,36 @@
     document.getElementById('face-bottom-label').textContent = '얼굴이 인식되었어요!';
   }
 
+  let faceLostState = false;
+  function setFaceLost(lost) {
+    if (faceLostState === lost) return;
+    faceLostState = lost;
+    document.getElementById('face-lost-toast').classList.toggle('active', lost);
+    document.getElementById('face-frame').classList.toggle('face-lost', lost);
+    document.getElementById('face-measure-progress-wrap').classList.toggle('face-lost', lost);
+    const label = document.getElementById('face-bottom-label');
+    const sub   = document.getElementById('face-bottom-sub');
+    if (lost) {
+      label.textContent = '얼굴을 프레임 안에 맞춘 후';
+      label.style.color = '';
+      sub.textContent   = '다시 화면을 바라봐주세요.';
+    } else {
+      label.textContent = '잘 측정되고 있어요!';
+      label.style.color = '#2F6C46';
+      sub.textContent   = '지금처럼 화면을 계속 바라보세요.';
+    }
+  }
+
   let faceCountdownTimer = null;
 
   function confirmFaceDetected() {
     if (faceCountdownTimer) return;
-    // 버튼 비활성, 하단 텍스트 변경
-    document.getElementById('face-start-btn').disabled = true;
-    document.getElementById('face-start-btn').style.opacity = '0.5';
-    document.getElementById('face-bottom-label').textContent = '측정이 곧 시작됩니다';
-    document.getElementById('face-bottom-label').style.color = '#2f6c46';
+    const startBtn = document.getElementById('face-start-btn');
+    const bottomLabel = document.getElementById('face-bottom-label');
+    startBtn.disabled = true;
+    startBtn.style.opacity = '0.5';
+    bottomLabel.textContent = '측정이 곧 시작됩니다';
+    bottomLabel.style.color = '#2f6c46';
     startFaceCountdown();
   }
 
@@ -520,11 +527,12 @@
     let count = 3;
     const overlay = document.getElementById('face-countdown-overlay');
     const numEl   = document.getElementById('face-countdown-num');
+    const bottomLabel = document.getElementById('face-bottom-label');
 
     overlay.classList.add('active');
     numEl.textContent = count;
-    document.getElementById('face-bottom-label').textContent = `${count}초 후 측정이 시작됩니다`;
-    document.getElementById('face-bottom-label').style.color = '#2f6c46';
+    bottomLabel.textContent = `${count}초 후 측정이 시작됩니다`;
+    bottomLabel.style.color = '#2f6c46';
 
     faceCountdownTimer = setInterval(() => {
       count--;
@@ -533,9 +541,8 @@
         void numEl.offsetWidth;
         numEl.style.animation = 'faceCountPop 0.4s cubic-bezier(0.22, 1, 0.36, 1)';
         numEl.textContent = count;
-        document.getElementById('face-bottom-label').textContent = `${count}초 후 측정이 시작됩니다`;
+        bottomLabel.textContent = `${count}초 후 측정이 시작됩니다`;
 
-        // 카운트다운 2초 시점: canvas fade-in 시작
         if (count === 2) {
           const canvas = document.getElementById('face-landmark-canvas');
           if (canvas) canvas.classList.add('visible');
@@ -544,30 +551,26 @@
         clearInterval(faceCountdownTimer);
         faceCountdownTimer = null;
         overlay.classList.remove('active');
-        document.getElementById('face-bottom-label').textContent = '잘 측정되고 있어요!';
+        bottomLabel.textContent = '잘 측정되고 있어요!';
         document.getElementById('face-bottom-sub').textContent = '지금처럼 화면을 계속 바라보세요.';
-
-        // 30초 측정 시작
         startFaceMeasureTimer();
       }
     }, 1000);
   }
 
   let faceMeasureTimer  = null;
-  const FACE_MEASURE_TOTAL = 30; // 초
+  const FACE_MEASURE_TOTAL = 30;
 
   function startFaceMeasureTimer() {
     faceMeasuring = true;
 
-    const timerEl    = document.getElementById('face-measure-timer');
+    const timerEl      = document.getElementById('face-measure-timer');
     const progressWrap = document.getElementById('face-measure-progress-wrap');
-    const pctEl      = document.getElementById('face-measure-progress-pct');
-    const fillEl     = document.getElementById('face-measure-progress-fill');
+    const pctEl        = document.getElementById('face-measure-progress-pct');
+    const fillEl       = document.getElementById('face-measure-progress-fill');
 
     timerEl.classList.add('active');
     progressWrap.classList.add('active');
-
-    let elapsed = 0;
 
     function formatTime(sec) {
       const m = String(Math.floor(sec / 60)).padStart(2, '0');
@@ -575,53 +578,205 @@
       return `${m}:${s}`;
     }
 
-    // 초기값
-    timerEl.textContent = formatTime(FACE_MEASURE_TOTAL - elapsed);
+    timerEl.textContent = formatTime(FACE_MEASURE_TOTAL);
     pctEl.textContent   = '0%';
     fillEl.style.width  = '0%';
 
-    faceMeasureTimer = setInterval(() => {
-      elapsed++;
-      const remaining = FACE_MEASURE_TOTAL - elapsed;
-      const pct = Math.round((elapsed / FACE_MEASURE_TOTAL) * 100);
+    let activeElapsed = 0;
+    let lastTs = null;
+    let shownAlmost = false;
 
-      timerEl.textContent = formatTime(remaining);
-      pctEl.textContent   = `${pct}%`;
+    function tick(ts) {
+      if (!faceMeasuring) return;
+      if (lastTs !== null && !faceLostState) {
+        activeElapsed = Math.min(activeElapsed + (ts - lastTs) / 1000, FACE_MEASURE_TOTAL);
+      }
+      lastTs = ts;
+
+      const pct = (activeElapsed / FACE_MEASURE_TOTAL) * 100;
+      const remaining = FACE_MEASURE_TOTAL - activeElapsed;
+      timerEl.textContent = formatTime(Math.ceil(remaining));
+      pctEl.textContent   = `${Math.floor(pct)}%`;
       fillEl.style.width  = `${pct}%`;
 
-      if (elapsed >= FACE_MEASURE_TOTAL) {
-        clearInterval(faceMeasureTimer);
+      if (pct >= 80 && !shownAlmost) {
+        shownAlmost = true;
+        const bottomLabel = document.getElementById('face-bottom-label');
+        bottomLabel.textContent = '거의 다 됐어요!';
+        bottomLabel.style.color = '#2F6C46';
+        document.getElementById('face-bottom-sub').textContent = '잠시만 더 화면을 응시해주세요.';
+      }
+
+      if (activeElapsed >= FACE_MEASURE_TOTAL) {
         faceMeasureTimer = null;
         faceMeasuring = false;
         onFaceMeasureComplete();
+        return;
       }
-    }, 1000);
+      faceMeasureTimer = requestAnimationFrame(tick);
+    }
+    faceMeasureTimer = requestAnimationFrame(tick);
   }
 
   function onFaceMeasureComplete() {
-    // 측정 완료 후 처리 — 실제 서비스에서는 결과 화면으로 전환
-    document.getElementById('face-bottom-label').textContent = '측정이 완료되었어요!';
-    document.getElementById('face-bottom-label').style.color = '#2f6c46';
-    document.getElementById('face-bottom-sub').textContent = '결과를 분석하고 있습니다.';
-    // 타이머·프로그레스 숨김
+    setFaceLost(false);
+    faceLostState = false;
     document.getElementById('face-measure-timer').classList.remove('active');
     document.getElementById('face-measure-progress-wrap').classList.remove('active');
-    // canvas fade-out
     const canvas = document.getElementById('face-landmark-canvas');
     if (canvas) canvas.classList.remove('visible');
+    showAnalyzingScreen();
+  }
+
+  function showAnalyzingScreen() {
+    if (faceDetectionLoop) { cancelAnimationFrame(faceDetectionLoop); faceDetectionLoop = null; }
+    if (faceStream) { faceStream.getTracks().forEach(t => t.stop()); faceStream = null; }
+    const video = document.getElementById('face-camera-feed');
+    if (video) video.srcObject = null;
+
+    const overlay = document.getElementById('analyzing-overlay');
+    const pctEl   = document.getElementById('analyzing-pct');
+    const canvas  = document.getElementById('analyzing-canvas');
+    overlay.classList.add('active');
+
+    const target  = 92;
+    const countDuration = 4000;
+    const startTs  = performance.now();
+
+    function updateCount(ts) {
+      const progress = Math.min((ts - startTs) / countDuration, 1);
+      const eased = progress < 0.5
+        ? 2 * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+      pctEl.textContent = Math.round(eased * target) + '%';
+      if (progress < 1) requestAnimationFrame(updateCount);
+    }
+    requestAnimationFrame(updateCount);
+
+    const ctx = canvas.getContext('2d');
+    const size = canvas.width;
+    const cx = size / 2, cy = size / 2;
+    const R  = size * 0.44;
+    let dotAnimFrame;
+    let dotStart = null;
+
+    function drawAI(ts) {
+      if (!dotStart) dotStart = ts;
+      const t = (ts - dotStart) / 1000;
+      ctx.clearRect(0, 0, size, size);
+
+      [0.32, 0.58, 0.84].forEach(scale => {
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * scale, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(47,108,70,0.06)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+
+      const arcs = [
+        { r: 0.84, speed:  0.22, sweep: 2.2, lw: 3.0, alpha: 0.45 },
+        { r: 0.58, speed: -0.31, sweep: 1.6, lw: 2.2, alpha: 0.35 },
+        { r: 0.32, speed:  0.50, sweep: 1.9, lw: 1.5, alpha: 0.25 },
+      ];
+      arcs.forEach(({ r, speed, sweep, lw, alpha }) => {
+        const a = t * speed * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * r, a, a + sweep);
+        ctx.strokeStyle = `rgba(47,108,70,${alpha})`;
+        ctx.lineWidth = lw;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      });
+
+      const RING_INTERVAL = 1.6, RING_DURATION = 2.8;
+      for (let i = 0; i < 5; i++) {
+        const age = t - i * RING_INTERVAL;
+        if (age <= 0 || age > RING_DURATION) continue;
+        const p = age / RING_DURATION;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * (0.05 + 0.92 * p), 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(47,108,70,${Math.pow(1 - p, 1.8) * 0.2})`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      const b = 0.5 + 0.5 * Math.sin(t * 1.8);
+      const gr = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.28);
+      gr.addColorStop(0, `rgba(47,108,70,${0.18 + 0.10 * b})`);
+      gr.addColorStop(1, 'rgba(47,108,70,0)');
+      ctx.fillStyle = gr;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+
+      dotAnimFrame = requestAnimationFrame(drawAI);
+    }
+    dotAnimFrame = requestAnimationFrame(drawAI);
+
+    setTimeout(() => {
+      cancelAnimationFrame(dotAnimFrame);
+      overlay.classList.remove('active');
+      showResultScreen();
+    }, 4500);
+  }
+
+  function showResultScreen() {
+    const overlay = document.getElementById('result-overlay');
+    overlay.classList.add('active');
+    window.scrollTo(0, 0);
+
+    document.querySelector('.phone').classList.remove('face-fullscreen');
+
+    const now = new Date();
+    const days = ['일','월','화','수','목','금','토'];
+    document.getElementById('result-date').textContent =
+      `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}(${days[now.getDay()]})`;
+
+    const SCORE = 75;
+    const duration = 1500;
+    const MAX_DASH = 547;
+
+    const arc = document.getElementById('result-gauge-fill-arc');
+    arc.style.transition = 'none';
+    arc.style.strokeDashoffset = MAX_DASH;
+
+    let gaugeStart = null;
+    const targetOffset = MAX_DASH * (1 - SCORE / 100);
+
+    function drawGauge(ts) {
+      if (!gaugeStart) gaugeStart = ts;
+      const elapsed = ts - gaugeStart;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+
+      arc.style.strokeDashoffset = MAX_DASH - eased * (MAX_DASH - targetOffset);
+      document.getElementById('result-score-num').textContent = Math.round(eased * SCORE);
+
+      if (t < 1) {
+        requestAnimationFrame(drawGauge);
+      } else {
+        setTimeout(() => animateBar('metric-fill-stress',    35), 0);
+        setTimeout(() => animateBar('metric-fill-anxiety',   65), 250);
+        setTimeout(() => animateBar('metric-fill-depression',70), 500);
+      }
+    }
+    requestAnimationFrame(() => requestAnimationFrame(drawGauge));
+  }
+
+  function animateBar(id, pct) {
+    document.getElementById(id).style.width = pct + '%';
   }
 
   function stopFaceDetection() {
     if (faceDetectionLoop) { cancelAnimationFrame(faceDetectionLoop); faceDetectionLoop = null; }
     if (faceLandmarker) { faceLandmarker.close(); faceLandmarker = null; }
     if (faceCountdownTimer) { clearInterval(faceCountdownTimer); faceCountdownTimer = null; }
-    if (faceMeasureTimer)   { clearInterval(faceMeasureTimer);   faceMeasureTimer = null; }
+    if (faceMeasureTimer)   { cancelAnimationFrame(faceMeasureTimer); faceMeasureTimer = null; }
     document.getElementById('face-countdown-overlay')?.classList.remove('active');
     document.getElementById('face-measure-timer')?.classList.remove('active');
     document.getElementById('face-measure-progress-wrap')?.classList.remove('active');
     const canvas = document.getElementById('face-landmark-canvas');
     if (canvas) { canvas.classList.remove('visible'); }
-    // 헤더 + 탭 복구
     document.querySelector('.phone').classList.remove('face-fullscreen');
     faceDetected = false;
     faceMeasuring = false;
@@ -670,9 +825,9 @@
   }
 
   // ── 측정 중 상태 플래그 ─────────────────────
-  let isMeasuring = false;       // 측정 진행 중 여부
-  let pendingTabIndex = null;    // 이동하려던 탭 인덱스
-  let pendingAction = null;      // 'tab' | 'back'
+  let isMeasuring = false;
+  let pendingTabIndex = null;
+  let pendingAction = null;
 
   function setMeasuring(val) { isMeasuring = val; }
 
@@ -686,30 +841,26 @@
     document.getElementById('measure-exit-dim').classList.remove('active');
     pendingAction = null;
     pendingTabIndex = null;
-    // 브라우저 뒤로가기 인터셉트를 위해 history 다시 추가
     history.pushState({ measuring: true }, '');
   }
 
   function confirmExit() {
     document.getElementById('measure-exit-dim').classList.remove('active');
     isMeasuring = false;
-    // 카메라 정리
     if (faceStream) { faceStream.getTracks().forEach(t => t.stop()); faceStream = null; }
     clearAllTimers();
     stopRecording();
     if (voiceLottie) { voiceLottie.stop(); voiceLottie = null; }
     if (faceLottie) { faceLottie.stop(); faceLottie = null; }
+    document.querySelector('.phone').classList.remove('face-fullscreen');
 
     if (pendingAction === 'tab' && pendingTabIndex !== null) {
-      // 팝업 없이 탭 전환
       _switchNavTabDirect(pendingTabIndex);
     } else {
-      // 게이지 화면으로 복귀
       ['ai-view-guide','ai-view-voice','ai-view-record','ai-view-face','ai-view-face-record'].forEach(id => {
         document.getElementById(id).style.display = 'none';
       });
       document.getElementById('ai-view-gauge').style.display = 'flex';
-      // 게이지 애니메이션 재실행
       const arc = document.getElementById('gauge-fill-arc');
       if (arc) {
         arc.style.transition = 'none';
@@ -724,7 +875,6 @@
     pendingTabIndex = null;
   }
 
-  // 브라우저 뒤로가기 인터셉트
   window.addEventListener('popstate', () => {
     if (isMeasuring) {
       history.pushState({ measuring: true }, '');
@@ -740,7 +890,6 @@
   }
 
   function switchNavTab(index) {
-    // 측정 중이면 팝업 노출
     if (isMeasuring) {
       showExitModal('tab', index);
       return;
@@ -749,6 +898,9 @@
   }
 
   function _switchNavTabDirect(index) {
+    document.getElementById('result-overlay').classList.remove('active');
+    document.getElementById('analyzing-overlay').classList.remove('active');
+
     document.querySelectorAll('.nav-tab').forEach((t, i) => {
       t.classList.toggle('active', i === index);
     });
@@ -758,12 +910,9 @@
     window.scrollTo(0, 0);
 
     if (index === 2) {
+      const aiViews = ['ai-view-guide','ai-view-voice','ai-view-record','ai-view-face','ai-view-face-record'];
+      aiViews.forEach(id => { document.getElementById(id).style.display = 'none'; });
       document.getElementById('ai-view-gauge').style.display = 'flex';
-      document.getElementById('ai-view-guide').style.display = 'none';
-      document.getElementById('ai-view-voice').style.display = 'none';
-      document.getElementById('ai-view-record').style.display = 'none';
-      document.getElementById('ai-view-face').style.display = 'none';
-      document.getElementById('ai-view-face-record').style.display = 'none';
       if (faceStream) { faceStream.getTracks().forEach(t => t.stop()); faceStream = null; }
       if (typeof stopFaceDetection === 'function') stopFaceDetection();
       document.querySelector('.phone').classList.remove('face-fullscreen');
@@ -795,11 +944,10 @@
   // ── 정서 상태 탭 데이터 & 렌더링 ──────────────────
 
   // ★ 백엔드 연동 시 이 두 값과 q9Flag만 교체
-  const DEPRESSION_SCORE = 25;   // PHQ-9 총점
-  const ANXIETY_SCORE    = 11;   // GAD-7 총점
-  const Q9_FLAG          = true; // 9번 문항 1점 이상 여부
+  const DEPRESSION_SCORE = 25;
+  const ANXIETY_SCORE    = 11;
+  const Q9_FLAG          = true;
 
-  // 우울 단계 데이터
   const depressionLevels = [
     {
       range: [0, 4],
@@ -862,7 +1010,6 @@
     { range: '20–27점', level: '심한 우울',         desc: '현재 상태가 일상에 상당한 어려움을 줄 수 있으므로, 신속한 전문적 도움이 필요합니다.' },
   ];
 
-  // 불안 단계 데이터
   const anxietyLevels = [
     {
       range: [0, 4],
@@ -955,7 +1102,6 @@
     const dLevel = getLevel(DEPRESSION_SCORE, depressionLevels);
     const aLevel = getLevel(ANXIETY_SCORE, anxietyLevels);
 
-    // 우울 렌더링
     document.getElementById('depression-hero-bg').style.background = dLevel.heroBg;
     document.getElementById('depression-score-display').textContent = DEPRESSION_SCORE + '점';
     const dBadge = document.getElementById('depression-badge');
@@ -970,7 +1116,6 @@
     renderSolutions('depression-solutions', dLevel.solutions);
     document.getElementById('depression-crisis-box').style.display = Q9_FLAG ? 'block' : 'none';
 
-    // 불안 렌더링
     document.getElementById('anxiety-hero-bg').style.background = aLevel.heroBg;
     document.getElementById('anxiety-score-display').textContent = ANXIETY_SCORE + '점';
     const aBadge = document.getElementById('anxiety-badge');
@@ -991,7 +1136,6 @@
       if (entry.isIntersecting) {
         const fill = entry.target;
         const target = fill.dataset.width;
-        // Small delay so transition fires after paint
         requestAnimationFrame(() => {
           fill.style.width = target;
         });
