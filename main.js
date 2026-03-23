@@ -789,6 +789,7 @@
     window.scrollTo(0, 0);
 
     if (!faceLottie) {
+      faceLottie = true;
       fetch('https://jayohhh123.github.io/kossresults/videoNotice.json')
         .then(r => r.json())
         .then(data => {
@@ -810,6 +811,7 @@
     window.scrollTo(0, 0);
 
     if (!voiceLottie) {
+      voiceLottie = true;
       fetch('https://jayohhh123.github.io/kossresults/voiceAnimation.json')
         .then(r => r.json())
         .then(data => {
@@ -850,8 +852,8 @@
     if (faceStream) { faceStream.getTracks().forEach(t => t.stop()); faceStream = null; }
     clearAllTimers();
     stopRecording();
-    if (voiceLottie) { voiceLottie.stop(); voiceLottie = null; }
-    if (faceLottie) { faceLottie.stop(); faceLottie = null; }
+    if (voiceLottie) { voiceLottie.destroy(); voiceLottie = null; }
+    if (faceLottie) { faceLottie.destroy(); faceLottie = null; }
     document.querySelector('.phone').classList.remove('face-fullscreen');
 
     if (pendingAction === 'tab' && pendingTabIndex !== null) {
@@ -918,8 +920,8 @@
       document.querySelector('.phone').classList.remove('face-fullscreen');
       if (typeof clearAllTimers === 'function') clearAllTimers();
       if (typeof stopRecording === 'function') stopRecording();
-      if (voiceLottie) { voiceLottie.stop(); voiceLottie = null; }
-      if (faceLottie) { faceLottie.stop(); faceLottie = null; }
+      if (voiceLottie) { voiceLottie.destroy(); voiceLottie = null; }
+      if (faceLottie) { faceLottie.destroy(); faceLottie = null; }
       const arc = document.getElementById('gauge-fill-arc');
       if (arc) {
         arc.style.transition = 'none';
