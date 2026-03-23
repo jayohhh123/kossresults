@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>직무스트레스 검사 결과 리포트</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/variable/pretendardvariable.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #d0d0d0;
+      font-family: 'Pretendard Variable', 'Pretendard', sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin-top: 0mm;
+      margin-right: 0mm;
+      margin-bottom: 0mm;
+      margin-left: 0mm;
+    }
+
+    /* 화면에서는 쉘이 투명하게(display:contents) */
+    .page-shell { display: contents; }
+
+    @media print {
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white;
+      }
+      .pages-wrapper {
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      /* 각 쉘 = A4 한 장 (첫 번째만 break-after) */
+      .page-shell {
+        display: block;
+        width: 210mm;
+        height: 297mm;
+        overflow: hidden;
+        margin: 0 !important;
+        padding: 0 !important;
+        page-break-after: always;
+        break-after: page;
+      }
+      /* 마지막 쉘은 break 제거 (빈 페이지 방지) */
+      .page-shell:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+
+      /* 595px × 1.333 = 793px ≈ 210mm */
+      .page {
+        width: 595px !important;
+        height: 842px !important;
+        transform: scale(1.333) !important;
+        transform-origin: top left !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+      }
+    }
+
+    /* ── Report pages wrapper ── */
+    .pages-wrapper {
+      padding: 40px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    /* ── PAGE (595 × 842) ── */
+    .page {
+      position: relative;
+      width: 595px;
+      height: 842px;
+      background: #fff;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.18);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    /* ─── Shared page styles ─── */
+
+    .line-top {
+      position: absolute; left: 43px; top: 32px;
+      width: 511px; height: 2px; background: #2F6C46;
+    }
+    .line-bottom {
+      position: absolute; left: 43px; top: 791px;
+      width: 511px; height: 2px; background: #2F6C46;
+    }
+    .footer {
+      position: absolute; left: 43px; top: 804px;
+      width: 511px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .footer img { height: 15px; width: auto; }
+    .footer-page { font-size: 8px; font-weight: 400; color: #A3A3A3; }
+
+    /* ═══════════════════════════
+       PAGE 1
+    ═══════════════════════════ */
+
+    /* Title */
+    .p1-title {
+      position: absolute; left: 42px; top: 44px; width: 126px;
+      font-size: 18px; font-weight: 700; color: #111;
+      letter-spacing: -0.36px; line-height: 23.4px;
+    }
+    /* User info */
+    .p1-userinfo {
+      position: absolute; left: 465px; top: 44px; width: 87px;
+      display: flex; flex-direction: column;
+    }
+    .p1-userinfo span {
+      font-size: 8px; font-weight: 400; color: #333;
+      letter-spacing: -0.16px; line-height: 14.4px;
+    }
+    /* Score banner */
+    .p1-score-banner {
+      position: absolute; left: 43px; top: 111px;
+      width: 511px; height: 46px;
+      background: rgba(246,247,248,1);
+      border: 0.5px solid rgba(209,213,219,1);
+      display: flex; flex-direction: row; align-items: center;
+      gap: 8px; padding: 12px 20px;
+    }
+    .p1-score-text {
+      font-size: 13px; font-weight: 700; color: #111;
+      letter-spacing: -0.26px; line-height: 16.9px; flex: 1;
+    }
+    .p1-level-badge {
+      flex-shrink: 0; border: 1px solid #FF8820; border-radius: 50px;
+      padding: 4px 8px; font-size: 10px; font-weight: 700; color: #FF8820; line-height: 14px;
+    }
+    /* Summary */
+    .p1-summary {
+      position: absolute; left: 43px; top: 182px; width: 511px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .p1-summary-hl { font-size: 12px; font-weight: 600; color: #111; letter-spacing: -0.24px; line-height: 15.6px; }
+    .p1-summary-body { font-size: 9px; font-weight: 400; color: #333; letter-spacing: -0.18px; line-height: 13.5px; }
+    /* Section heading */
+    .p1-section {
+      position: absolute; left: 43px; top: 256px; width: 511px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .p1-section-title { font-size: 12px; font-weight: 600; color: #111; letter-spacing: -0.24px; line-height: 15.6px; }
+    .p1-section-desc { font-size: 9px; font-weight: 400; color: #333; letter-spacing: -0.18px; line-height: 13.5px; }
+    /* Table area */
+    .p1-table-area { position: absolute; left: 42px; top: 326px; width: 512px; }
+    .legend {
+      display: flex; justify-content: flex-end; gap: 8.77px;
+      align-items: center; height: 11px; margin-bottom: 11.7px;
+    }
+    .legend-item { display: flex; align-items: center; gap: 2.92px; }
+    .legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .legend-label { font-size: 7px; font-weight: 400; color: #111; line-height: 10.5px; }
+
+    .stress-table { width: 512px; border-collapse: collapse; }
+    .stress-table th, .stress-table td { border: 0.731px solid #EEEEEE; padding: 0; vertical-align: middle; }
+    .stress-table .th-main, .stress-table .th-sub { padding: 5px 5.85px; }
+
+    .col-factor { width: 78px; background: #F6F7F8; text-align: center; }
+    .col-factor.data-row { background: #fff; }
+    .col-factor.total-row { background: #FAFAFA; }
+    .col-factor span { font-size: 8.04px; font-weight: 500; color: #111; line-height: 9.6px; display: block; padding: 5.85px; text-align: center; }
+
+    .th-main { background: #F6F7F8; text-align: center; padding: 10px 5.85px; }
+    .th-main span { font-size: 8.04px; font-weight: 500; color: #111; line-height: 9.6px; display: block; text-align: center; }
+    .th-sub { width: 108px; background: #F6F7F8; text-align: center; padding: 10px 5.85px; }
+    .th-sub span { font-size: 8.04px; font-weight: 500; color: #111; line-height: 9.6px; display: block; }
+
+    .td-data { width: 108px; background: #fff; text-align: center; padding: 5.85px; vertical-align: middle; }
+    .td-data.total-row { background: #FAFAFA; }
+    .cell-inner { display: flex; width: 100%; align-items: center; justify-content: center; gap: 2.92px; }
+    .cell-dot { width: 4px; height: 4px; border-radius: 50%; flex-shrink: 0; }
+    .cell-text { font-size: 7.31px; font-weight: 400; color: #666; line-height: 8.8px; }
+    .cell-text.active { font-weight: 600; color: #111; }
+
+    /* Bottom 2-col */
+    .p1-bottom-cols {
+      position: absolute; left: 43px; top: 622px;
+      width: 511px;
+      display: flex; flex-direction: row; gap: 34px;
+    }
+    .bottom-col { width: 238px; display: flex; flex-direction: column; gap: 10px; }
+    .bottom-col-title { font-size: 12px; font-weight: 600; color: #111; letter-spacing: -0.24px; line-height: 15.6px; }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag { border: 0.73px solid #D1D5DB; border-radius: 50px; padding: 5px 16px; font-size: 9px; font-weight: 400; color: #333; line-height: 13.5px; white-space: nowrap; }
+    .solutions { display: flex; flex-direction: column; gap: 8px; }
+    .solution-group { display: flex; flex-direction: column; gap: 4px; }
+    .solution-where { display: flex; align-items: center; gap: 2.5px; height: 14px; }
+    .solution-icon { width: 14px; height: 14px; flex-shrink: 0; }
+    .solution-where-label { font-size: 10px; font-weight: 600; color: #333; line-height: 14px; }
+    .solution-list { font-size: 9px; font-weight: 400; color: #333; line-height: 13px; }
+
+    /* ═══════════════════════════
+       PAGE 2
+    ═══════════════════════════ */
+
+    .p2-header {
+      position: absolute; left: 42px; top: 60px; width: 511px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .p2-header-title { font-size: 13px; font-weight: 700; color: #111; letter-spacing: -0.26px; line-height: 16.9px; }
+    .p2-header-sub { font-size: 9px; font-weight: 400; color: #666; letter-spacing: -0.18px; line-height: 13.5px; }
+
+    .p2-table-area { position: absolute; left: 42px; top: 114px; width: 512px; }
+
+    .detail-table { width: 512px; border-collapse: collapse; table-layout: fixed; }
+    .detail-table th, .detail-table td { border: 0.731px solid #EEEEEE; vertical-align: middle; }
+    .col-w-factor { width: 127px; }
+    .col-w-score  { width: 64px; }
+    .col-w-level  { width: 64px; }
+    .col-w-interp { width: 257px; }
+
+    .th-cell { background: #F6F7F8; text-align: center; padding: 5.85px; }
+    .th-cell span { font-size: 9px; font-weight: 500; color: #111; letter-spacing: -0.18px; line-height: 10.8px; }
+
+    .td-factor { background: #fff; text-align: center; padding: 5.85px; }
+    .td-factor.total { background: #FAFAFA; }
+    .factor-name { font-size: 10px; font-weight: 600; color: #111; letter-spacing: -0.2px; line-height: 14px; display: block; }
+    .factor-desc { font-size: 8px; font-weight: 400; color: #666; letter-spacing: -0.16px; line-height: 11.2px; display: block; margin-top: 2.9px; }
+
+    .td-score { background: #fff; text-align: center; padding: 5.85px; }
+    .td-score.total { background: #FAFAFA; }
+    .td-score span { font-size: 10px; font-weight: 600; color: #111; line-height: 12px; }
+
+    .td-level { background: #fff; text-align: center; padding: 5.85px; }
+    .td-level.total { background: #FAFAFA; }
+
+    .level-badge-p2 { display: inline-flex; align-items: center; justify-content: center; border-radius: 50px; padding: 3px 9px; font-size: 9px; font-weight: 600; line-height: 13.5px; }
+    .badge-safe    { background: #E8FED0; color: #7CCA23; }
+    .badge-caution { background: #FFF4CE; color: #FF9D00; }
+    .badge-danger  { background: #FFECD8; color: #FF8820; }
+    .badge-severe  { background: #FFEBEB; color: #FD5656; }
+
+    .td-interp { background: #fff; padding: 13px 8px; vertical-align: middle; }
+    .td-interp.total { background: #FAFAFA; }
+    .td-interp p { font-size: 8px; font-weight: 400; color: #111; line-height: 11.2px; }
+  </style>
+</head>
+<body>
+
+<!-- Pages -->
+<div class="pages-wrapper" id="pagesWrapper">
+
+  <!-- ══════════════ PAGE 1 ══════════════ -->
+  <div class="page-shell">
+  <div class="page" id="page1">
+    <div class="line-top"></div>
+    <div class="line-bottom"></div>
+
+    <div class="p1-title">직무스트레스 검사<br>결과 리포트</div>
+
+    <div class="p1-userinfo">
+      <span>이름: {username}</span>
+      <span>성별: 여</span>
+      <span>검사일자: 2025-10-01</span>
+    </div>
+
+    <div class="p1-score-banner">
+      <div class="p1-score-text">{username} 님의 직무스트레스 총점 51.2점</div>
+      <div class="p1-level-badge">위험 수준</div>
+    </div>
+
+    <div class="p1-summary">
+      <div class="p1-summary-hl">{username} 님의 직무스트레스 총점은 51.2점으로, 위험 수준에 해당합니다.</div>
+      <div class="p1-summary-body">스트레스 반응이 누적되고 있으며, 감정 기복, 피로, 관계 부담 등으로 인해 일상 기능에 어려움이 나타날 수 있습니다. 더 악화되기 전에 적극적인 관리와 외부 자원 연계가 필요합니다.</div>
+    </div>
+
+    <div class="p1-section">
+      <div class="p1-section-title">요인별 직무스트레스 수준</div>
+      <div class="p1-section-desc">한국 근로자 성별 기준과 비교한 나의 상대적인 직무스트레스 수준으로, 색으로 표시된 위치는 현재 나의 상태를 나타냅니다. 개별 항목의 점수가 높을수록 해당 요인으로부터 받는 스트레스 수준이 높다는 뜻입니다.</div>
+    </div>
+
+    <div class="p1-table-area">
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#85DD20;"></div><span class="legend-label">안전</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#FFC300;"></div><span class="legend-label">주의</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#FF8820;"></div><span class="legend-label">위험</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#FD5656;"></div><span class="legend-label">심각</span></div>
+      </div>
+      <table class="stress-table">
+        <thead>
+          <tr>
+            <th class="col-factor" rowspan="2"><span>측정 요인</span></th>
+            <th class="th-main" colspan="4"><span>한국 근로자 참고값(여성)</span></th>
+          </tr>
+          <tr>
+            <th class="th-sub"><span>안전<br>하위 25%</span></th>
+            <th class="th-sub"><span>주의<br>하위 50%</span></th>
+            <th class="th-sub"><span>위험<br>상위 50%</span></th>
+            <th class="th-sub"><span>심각<br>상위 25%</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="col-factor data-row"><span>물리적 환경</span></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">33.3 이하</span></div></td>
+            <td class="td-data"><div class="cell-inner"><div class="cell-dot" style="background:#FFC300;"></div><span class="cell-text active">33.4~44.4</span></div></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">44.5~55.5</span></div></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">55.6 이상</span></div></td>
+          </tr>
+          <tr>
+            <td class="col-factor data-row"><span>직무 요구</span></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">41.6 이하</span></div></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">41.7~54.1</span></div></td>
+            <td class="td-data"><div class="cell-inner"><div class="cell-dot" style="background:#FF8820;"></div><span class="cell-text active">54.2~62.5</span></div></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">62.6 이상</span></div></td>
+          </tr>
+          <tr>
+            <td class="col-factor data-row"><span>직무 자율</span></td>
+            <td class="td-data"><div class="cell-inner"><div class="cell-dot" style="background:#85DD20;"></div><span class="cell-text active">53.3 이하</span></div></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">53.4~60.0</span></div></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">60.1~66.6</span></div></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">66.7 이상</span></div></td>
+          </tr>
+          <tr>
+            <td class="col-factor data-row"><span>관계 갈등</span></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">-</span></div></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">33.3 이하</span></div></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">33.4~41.6</span></div></td>
+            <td class="td-data"><div class="cell-inner"><div class="cell-dot" style="background:#FD5656;"></div><span class="cell-text active">41.7 이상</span></div></td>
+          </tr>
+          <tr>
+            <td class="col-factor data-row"><span>직무 불안정</span></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">38.8 이하</span></div></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">38.9~50.0</span></div></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">50.1~55.5</span></div></td>
+            <td class="td-data"><div class="cell-inner"><div class="cell-dot" style="background:#FD5656;"></div><span class="cell-text active">55.6 이상</span></div></td>
+          </tr>
+          <tr>
+            <td class="col-factor data-row"><span>조직 체계</span></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">42.8 이하</span></div></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">42.9~52.3</span></div></td>
+            <td class="td-data"><div class="cell-inner"><div class="cell-dot" style="background:#FF8820;"></div><span class="cell-text active">52.4~61.9</span></div></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">62.0 이상</span></div></td>
+          </tr>
+          <tr>
+            <td class="col-factor data-row"><span>보상 부적절</span></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">55.5 이하</span></div></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">55.6~66.6</span></div></td>
+            <td class="td-data"><div class="cell-inner"><div class="cell-dot" style="background:#FF8820;"></div><span class="cell-text active">66.7~77.7</span></div></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">77.8 이상</span></div></td>
+          </tr>
+          <tr>
+            <td class="col-factor data-row"><span>직장 문화</span></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">33.3 이하</span></div></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">33.4~41.6</span></div></td>
+            <td class="td-data"><div class="cell-inner"><span class="cell-text">41.7~50.0</span></div></td>
+            <td class="td-data"><div class="cell-inner"><div class="cell-dot" style="background:#FD5656;"></div><span class="cell-text active">50.1 이상</span></div></td>
+          </tr>
+          <tr>
+            <td class="col-factor total-row"><span style="font-weight:700;">총점</span></td>
+            <td class="td-data total-row"><div class="cell-inner"><span class="cell-text">49.5 이하</span></div></td>
+            <td class="td-data total-row"><div class="cell-inner"><span class="cell-text">49.6~51.1</span></div></td>
+            <td class="td-data total-row"><div class="cell-inner"><div class="cell-dot" style="background:#FF8820;"></div><span class="cell-text active">51.2~56.6</span></div></td>
+            <td class="td-data total-row"><div class="cell-inner"><span class="cell-text">56.7 이상</span></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="p1-bottom-cols">
+      <div class="bottom-col">
+        <div class="bottom-col-title">스트레스 심각 요인</div>
+        <div class="tags">
+          <div class="tag">관계 갈등</div>
+          <div class="tag">직무 불안정</div>
+          <div class="tag">직장 문화</div>
+        </div>
+      </div>
+      <div class="bottom-col">
+        <div class="bottom-col-title">전문가 추천 솔루션</div>
+        <div class="solutions">
+          <div class="solution-group">
+            <div class="solution-where">
+              <svg class="solution-icon" viewBox="0 0 14 14" fill="none">
+                <rect x="2" y="1" width="10" height="12" rx="0.5" stroke="#333" stroke-width="1" fill="none"/>
+                <rect x="4" y="3" width="2" height="2" fill="#333"/>
+                <rect x="8" y="3" width="2" height="2" fill="#333"/>
+                <rect x="4" y="7" width="2" height="2" fill="#333"/>
+                <rect x="8" y="7" width="2" height="2" fill="#333"/>
+                <rect x="5.5" y="10" width="3" height="3" fill="#333"/>
+              </svg>
+              <span class="solution-where-label">직장에서</span>
+            </div>
+            <div class="solution-list">
+              - 상사에게 현재 상황 공유하고 업무 조율 요청하기<br>
+              - 사내 심리상담 등 전문가 자원 활용하기
+            </div>
+          </div>
+          <div class="solution-group">
+            <div class="solution-where">
+              <svg class="solution-icon" viewBox="0 0 14 14" fill="none">
+                <path d="M3 9.5C1.6 9.5 1 8.5 1 7.5C1 6.5 1.8 5.7 2.8 5.5C3 3.5 4.8 2 7 2C9.2 2 11 3.5 11.2 5.5C12.2 5.7 13 6.5 13 7.5C13 8.5 12.4 9.5 11 9.5H3Z" stroke="#333" stroke-width="1" fill="none"/>
+              </svg>
+              <span class="solution-where-label">일상에서</span>
+            </div>
+            <div class="solution-list">
+              - 스트레스 원인을 적어보고 현재 할 수 있는 일 정리하기<br>
+              - 힘든 감정을 혼자 감당하지 말고 주변 사람과 나누기<br>
+              - 자기 비난 멈추기
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <img src="data:image/png;base64,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" alt="클라이피 로고" />
+      <span class="footer-page">1</span>
+    </div>
+  </div>
+  </div><!-- /.page-shell (page1) -->
+
+  <!-- ══════════════ PAGE 2 ══════════════ -->
+  <div class="page-shell">
+  <div class="page" id="page2">
+    <div class="line-top"></div>
+    <div class="line-bottom"></div>
+
+    <div class="p2-header">
+      <div class="p2-header-title">결과 해석 및 관리 방안</div>
+      <div class="p2-header-sub">{username} 님의 직무스트레스 요인별 결과에 대한 해석과 관리 방안을 알려드립니다.</div>
+    </div>
+
+    <div class="p2-table-area">
+      <table class="detail-table">
+        <colgroup>
+          <col class="col-w-factor">
+          <col class="col-w-score">
+          <col class="col-w-level">
+          <col class="col-w-interp">
+        </colgroup>
+        <thead>
+          <tr>
+            <th class="th-cell"><span>측정 요인</span></th>
+            <th class="th-cell"><span>나의 점수</span></th>
+            <th class="th-cell"><span>나의 수준</span></th>
+            <th class="th-cell"><span>결과 해석 및 관리 방안</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-factor">
+              <span class="factor-name">물리적 환경</span>
+              <span class="factor-desc">작업 방식의 위험성,<br>공기의 오염, 신체 부담 등</span>
+            </td>
+            <td class="td-score"><span>44.4</span></td>
+            <td class="td-level"><span class="level-badge-p2 badge-caution">주의</span></td>
+            <td class="td-interp">
+              <p>일부 환경 요인(소음, 조도, 환기 등)에서 불편함을 느낄 수 있으며, 이는 피로와 집중력 저하로 이어질 가능성이 있습니다. 환경적 자극에 민감하다면, 소형 공기청정기, 스탠드 조명, 귀마개 등 간단한 도구를 활용해 개선을 시도할 수 있습니다.</p>
+            </td>
+          </tr>
+          <tr>
+            <td class="td-factor">
+              <span class="factor-name">직무 요구</span>
+              <span class="factor-desc">시간적 압박, 업무량 증가,<br>과도한 책임 및 직무부담 등</span>
+            </td>
+            <td class="td-score"><span>50.1</span></td>
+            <td class="td-level"><span class="level-badge-p2 badge-danger">위험</span></td>
+            <td class="td-interp">
+              <p>과중한 업무 부담으로 인해 에너지 소모가 큰 상태로, 이러한 상황이 지속될 경우 탈진의 위험이 높습니다. 상사 및 팀원과의 협의를 통해 업무량을 조절하고, 회복 시간을 확보하는 것이 필요합니다.</p>
+            </td>
+          </tr>
+          <tr>
+            <td class="td-factor">
+              <span class="factor-name">직무 자율</span>
+              <span class="factor-desc">기술적 재량 및 자율성 저하,<br>업무 예측 불가능성,<br>직무수행 권한 부족 등</span>
+            </td>
+            <td class="td-score"><span>40.0</span></td>
+            <td class="td-level"><span class="level-badge-p2 badge-safe">안전</span></td>
+            <td class="td-interp">
+              <p>직무에 대한 충분한 재량과 권한이 부여된 상태로, 주도적인 업무 수행이 가능하며 만족감도 높습니다. 자신의 판단에 대한 정기적인 피드백을 받고 필요한 역량을 개발한다면 성장에 많은 도움이 될 것입니다.</p>
+            </td>
+          </tr>
+          <tr>
+            <td class="td-factor">
+              <span class="factor-name">관계 갈등</span>
+              <span class="factor-desc">상사 및 동료의 도움 또는<br>지지 부족 등</span>
+            </td>
+            <td class="td-score"><span>66.7</span></td>
+            <td class="td-level"><span class="level-badge-p2 badge-severe">심각</span></td>
+            <td class="td-interp">
+              <p>상사나 동료와의 관계에서 상호 신뢰나 협력이 약화되어 있으며, 고립감, 소외감, 위축감 등을 경험할 가능성이 높습니다. 회복을 위해 심리적 지지를 받을 수 있는 외부 자원이 필요하며, 조직 내 중재 요청도 고려해보아야 합니다.</p>
+            </td>
+          </tr>
+          <tr>
+            <td class="td-factor">
+              <span class="factor-name">직무 불안정</span>
+              <span class="factor-desc">구직 기회의 불안,<br>고용 불안정성 등</span>
+            </td>
+            <td class="td-score"><span>66.7</span></td>
+            <td class="td-level"><span class="level-badge-p2 badge-severe">심각</span></td>
+            <td class="td-interp">
+              <p>현재의 직무 유지 자체에 대해 극심한 불안과 위기감을 느끼고 있으며, 생계에 대한 압박도 존재할 수 있습니다. 통제감 상실, 무기력감 등을 다룰 수 있는 심리상담과 함께 커리어 코칭, 실질적인 지원 연결이 필요합니다.</p>
+            </td>
+          </tr>
+          <tr>
+            <td class="td-factor">
+              <span class="factor-name">조직 체계</span>
+              <span class="factor-desc">조직 운영 및 인사 체계의<br>비합리성과 불공정성,<br>조직 내 갈등 등</span>
+            </td>
+            <td class="td-score"><span>61.9</span></td>
+            <td class="td-level"><span class="level-badge-p2 badge-danger">위험</span></td>
+            <td class="td-interp">
+              <p>조직 운영 방식과 의사결정 구조에서 불합리함을 경험하고 있으며, 이는 심리적 소진과 업무 의욕 저하로 이어질 수 있습니다. 팀 내 소통 구조 개선을 요청하거나, 외부 상담을 통해 감정적 부담을 관리하는 것이 도움이 됩니다.</p>
+            </td>
+          </tr>
+          <tr>
+            <td class="td-factor">
+              <span class="factor-name">보상 부적절</span>
+              <span class="factor-desc">금전적 보상 및 존중 부족,<br>기대 부적합, 내적 동기 결여 등</span>
+            </td>
+            <td class="td-score"><span>66.7</span></td>
+            <td class="td-level"><span class="level-badge-p2 badge-danger">위험</span></td>
+            <td class="td-interp">
+              <p>노력 대비 보상이 부족하다는 인식이 누적되어 있으며, 인정받지 못하는 경험이 심리적 무력감, 결핍감으로 이어지고 있습니다. 감정 표현을 위한 심리상담 등 외부 자원을 적극 활용하고, 조직 내 보상 체계의 개선 가능성을 객관적으로 점검해 보는 것이 필요합니다.</p>
+            </td>
+          </tr>
+          <tr>
+            <td class="td-factor">
+              <span class="factor-name">직장 문화</span>
+              <span class="factor-desc">한국적 집단주의적 문화,<br>직무 갈등, 성적 차별,<br>비합리적 의사소통 체계 등</span>
+            </td>
+            <td class="td-score"><span>50.1</span></td>
+            <td class="td-level"><span class="level-badge-p2 badge-severe">심각</span></td>
+            <td class="td-interp">
+              <p>조직 문화 자체가 심리적 건강에 위협이 될 수준입니다. 반복적인 소외, 차별, 억압적 분위기 속에서 정서적 탈진이 심화되고 있으며, 분노, 무기력감을 경험할 수 있습니다. 심리상담과 같은 외부 자원을 활용하는 것이 권장되며, 조직 차원의 변화가 어려운 경우, 현실적인 환경 조정이나 이동도 고려해볼 수 있습니다.</p>
+            </td>
+          </tr>
+          <tr>
+            <td class="td-factor total">
+              <span class="factor-name">총점</span>
+              <span class="factor-desc">전반적인 직무스트레스 수준</span>
+            </td>
+            <td class="td-score total"><span>51.2</span></td>
+            <td class="td-level total"><span class="level-badge-p2 badge-danger">위험</span></td>
+            <td class="td-interp total">
+              <p>직무스트레스가 누적되고 있으며, 감정 기복, 피로, 대인관계 부담 등에서 어려움이 뚜렷하게 나타날 수 있습니다. 일상 리듬 조정과 더불어 심리상담, 휴식 구조 마련 등 중재가 필요합니다. 적극적으로 자신의 감정 상태를 살피고, 스트레스 완화를 위한 구조적·정서적 지원을 받을 필요가 있습니다.</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="footer">
+      <img src="data:image/png;base64,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" alt="클라이피 로고" />
+      <span class="footer-page">2</span>
+    </div>
+  </div>
+  </div><!-- /.page-shell (page2) -->
+
+</div><!-- /pages-wrapper -->
+
+<script>
+async function downloadPDF() {
+  const btn = document.getElementById('btnDownload');
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="white" stroke-width="1.5" stroke-dasharray="25" stroke-dashoffset="10"><animateTransform attributeName="transform" type="rotate" from="0 8 8" to="360 8 8" dur="0.8s" repeatCount="indefinite"/></circle></svg> 생성 중...';
+
+  try {
+    // 라이브러리 로드 확인
+    if (typeof html2canvas === 'undefined') throw new Error('html2canvas 라이브러리가 로드되지 않았습니다.');
+    if (typeof window.jspdf === 'undefined') throw new Error('jsPDF 라이브러리가 로드되지 않았습니다.');
+
+    // 폰트 로딩 대기
+    await document.fonts.ready;
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    const pages = [document.getElementById('page1'), document.getElementById('page2')];
+
+    for (let i = 0; i < pages.length; i++) {
+      // 캡처 전 overflow 임시 해제
+      const el = pages[i];
+      const origOverflow = el.style.overflow;
+      el.style.overflow = 'visible';
+
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: 595,
+        height: 842,
+        scrollX: 0,
+        scrollY: 0,
+        logging: false,
+        imageTimeout: 15000,
+        onclone: (clonedDoc) => {
+          // 클론된 문서에서 툴바 숨기기
+          const toolbar = clonedDoc.querySelector('.toolbar');
+          if (toolbar) toolbar.style.display = 'none';
+        }
+      });
+
+      el.style.overflow = origOverflow;
+
+      const imgData = canvas.toDataURL('image/png');
+      if (i > 0) pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
+    }
+
+    pdf.save('직무스트레스_검사결과_리포트.pdf');
+
+  } catch (e) {
+    console.error('[PDF 오류]', e);
+    alert('오류: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M8 1v9M4 7l4 4 4-4M2 12v2h12v-2" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg> PDF 다운받기`;
+  }
+}
+</script>
+
+</body>
+</html>
