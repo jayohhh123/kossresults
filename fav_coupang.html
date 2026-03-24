@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 마음측정</title>
+
+  <!-- Lottie Web -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
+
+  <!-- MediaPipe Tasks Vision -->
+  <script type="module">
+    import { FilesetResolver, FaceLandmarker } from
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/vision_bundle.mjs';
+    window._FilesetResolver = FilesetResolver;
+    window._FaceLandmarker  = FaceLandmarker;
+    window._mediaPipeReady  = true;
+  </script>
+
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/variable/pretendardvariable.css');
+
+    :root {
+      --color-primary: #2f6c46;
+      --color-text: #111;
+      --color-border: #eee;
+      --color-gray: #9d9d9d;
+      --color-text-dark: #333;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    .ai-mental-care-root * {
+      box-sizing: border-box;
+      font-family: 'Pretendard Variable', Pretendard, -apple-system, sans-serif;
+    }
+
+    /* ── Keyframe animations ─────────────────────────────── */
+    @keyframes spinArc { 100% { transform: rotate(360deg); } }
+    @keyframes gaugeIn { from { stroke-dashoffset: 547; } to { stroke-dashoffset: 0; } }
+    .ai-gauge-arc { animation: gaugeIn 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
+    @keyframes faceCountPop {
+      0%   { transform: scale(0.4); opacity: 0; filter: blur(6px); }
+      70%  { filter: blur(0px); }
+      100% { transform: scale(1);   opacity: 1; }
+    }
+    @keyframes countPop {
+      0%   { transform: scale(0.4); opacity: 0; filter: blur(4px); }
+      60%  { filter: blur(0px); }
+      100% { transform: scale(1);   opacity: 1; filter: blur(0px); }
+    }
+    @keyframes btnRise {
+      0%   { transform: translateY(6px); box-shadow: none; }
+      100% { transform: translateY(0); }
+    }
+    @keyframes pulse1 { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+    @keyframes pulse2 { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    @keyframes pulse3 { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+    @keyframes pulse4 { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+    @keyframes pulse5 { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.09); } }
+    @keyframes analyzingSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    /* ── Root wrapper ─────────────────────────────────────── */
+    body { background: #fff; display: flex; justify-content: center; touch-action: manipulation; }
+    .ai-mental-care-root {
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 100vh;
+      background: #fff;
+    }
+
+    /* ── Shared ──────────────────────────────────────────── */
+    .bottom-btn {
+      width: 100%; height: 56px;
+      background: #2f6c46; border: none; border-radius: 12px;
+      color: #fff; font-family: inherit; font-size: 17px; font-weight: 600;
+      line-height: 1.3; cursor: pointer; letter-spacing: 0;
+      transition: opacity 0.2s ease;
+    }
+    .bottom-btn:active { opacity: 0.85; }
+    @media (hover: hover) { .bottom-btn:hover { opacity: 0.88; } }
+    .bottom-btn.face-inactive { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+
+    .ai-bottom-wrap { background: #fff; padding: 12px 24px 40px; }
+
+    /* ── View 1: 게이지 ──────────────────────────────────── */
+    .ai-view-gauge { display: flex; flex-direction: column; flex: 1; min-height: 100vh; }
+    .ai-section {
+      padding: 32px 24px 40px; display: flex;
+      flex-direction: column; align-items: flex-start; flex: 1;
+    }
+    @media (min-width: 481px) { .ai-section { padding: 48px 32px 48px; } }
+    @media (max-width: 480px) { .ai-section { padding-bottom: 28px; } }
+
+    .ai-title { font-size: 20px; font-weight: 600; line-height: 1.3; color: #111; margin-bottom: 36px; }
+    .ai-gauge-wrap { width: 100%; display: flex; justify-content: center; margin-bottom: 44px; }
+    .ai-gauge-container { position: relative; width: 270px; height: 270px; }
+    .ai-gauge-outer-ring {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 290px; height: 290px; border-radius: 50%;
+      border: 3px solid #333; opacity: 0.08; box-sizing: border-box; z-index: 0;
+    }
+    .ai-gauge-bg-circle {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 248px; height: 248px; border-radius: 50%;
+      background: radial-gradient(circle at 40% 35%, #ffffff 0%, #f0f0f0 100%);
+      box-shadow: 6px 6px 16px rgba(0,0,0,0.10), -4px -4px 12px rgba(255,255,255,0.95),
+        inset 3px 3px 8px rgba(0,0,0,0.06), inset -2px -2px 6px rgba(255,255,255,0.9);
+      z-index: 1;
+    }
+    .ai-gauge-svg { width: 270px; height: 270px; position: absolute; top: 0; left: 0; z-index: 2; }
+    .ai-gauge-inner {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 2;
+    }
+    .ai-gauge-label { font-size: 15px; font-weight: 500; color: #2f6c46; line-height: 1.4; }
+    .ai-gauge-score-row { display: flex; align-items: flex-end; gap: 4px; }
+    .ai-gauge-score { font-size: 64px; font-weight: 800; color: #111; line-height: 1; letter-spacing: -2px; }
+    .ai-gauge-unit { font-size: 22px; font-weight: 500; color: #111; padding-bottom: 8px; }
+    .ai-desc-card { width: 100%; background: #eef7f2; border-radius: 12px; padding: 20px; }
+    .ai-desc-text { font-size: 15px; font-weight: 400; color: #333; line-height: 1.5; margin: 0; }
+
+    /* ── View 2: 안내 ─────────────────────────────────────── */
+    .ai-view-guide { display: flex; flex-direction: column; min-height: 100vh; }
+    .ai-guide-section { padding: 32px 24px 40px; display: flex; flex-direction: column; flex: 1; }
+    .ai-guide-title { font-size: 20px; font-weight: 600; color: #111; line-height: 1.3; margin-bottom: 8px; }
+    .ai-guide-desc { font-size: 15px; font-weight: 400; color: #333; line-height: 1.45; margin-bottom: 28px; white-space: pre-line; }
+    .ai-step-cards { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+    .ai-step-card {
+      background: #f6f7f8; border-radius: 16px; padding: 20px;
+      display: flex; flex-direction: column; gap: 14px; transition: background 0.2s ease;
+    }
+    @media (hover: hover) { .ai-step-card:hover { background: #eef2ef; } }
+    .ai-step-card-title { display: flex; align-items: center; gap: 10px; }
+    .ai-step-emoji { font-size: 20px; line-height: 1; }
+    .ai-step-title-text { font-size: 16px; font-weight: 700; color: #111; line-height: 1.4; }
+    .ai-guide-bullets { display: flex; flex-direction: column; gap: 4px; padding-left: 4px; }
+    .ai-guide-bullet {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 15px; font-weight: 400; color: #555; line-height: 1.55; margin: 0;
+    }
+    .ai-guide-bullet::before { content: "•"; color: #2f6c46; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+    .ai-permission-text { font-size: 13px; color: #666; text-align: center; margin-bottom: 12px; line-height: 1.5; letter-spacing: -0.3px; }
+    .ai-permission-text strong { font-weight: 700; color: #111; }
+
+    /* ── View 3 & 5: 음성/얼굴 안내 ─────────────────────── */
+    .voice-guide-page { flex-direction: column; min-height: 100vh; background: #fff; }
+    .voice-guide-hero {
+      width: 100%; height: 230px; position: relative;
+      display: flex; align-items: flex-end; justify-content: center;
+      flex-shrink: 0; overflow: visible;
+      background: linear-gradient(to bottom, rgba(255,255,255,0) 30%, rgba(255,255,255,1) 100%),
+        linear-gradient(135deg, #2F6C46 0%, #99BE78 0%, #C8E1B1 61%, #8CCBA4 100%);
+    }
+    .voice-guide-lottie { width: 300px; height: auto; position: relative; z-index: 1; margin-bottom: -60px; }
+    .voice-guide-body { padding: 80px 24px 120px; flex: 1; }
+    .voice-guide-text { font-size: 18px; font-weight: 600; color: #111; line-height: 1.65; text-align: center; }
+
+    /* ── View 4: 음성 녹음 ───────────────────────────────── */
+    .voice-record-page { flex-direction: column; min-height: 100vh; background: #fff; }
+    .voice-record-body { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 48px 24px 140px; gap: 28px; }
+    @media (max-width: 480px) {
+      .voice-record-body { padding-top: 48px; padding-bottom: 240px; gap: 20px; }
+      .voice-record-body > div:first-child { margin-bottom: 0 !important; }
+      .voice-sentence-fill { margin-top: 5px; }
+    }
+    @media (min-width: 481px) { .voice-record-page { justify-content: center; } .voice-record-body { flex: 0 0 auto; } }
+
+    .voice-waveform { position: relative; width: 170px; height: 170px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-bottom: 16px; }
+    .voice-waveform-ring { position: absolute; border-radius: 50%; }
+    .voice-waveform-ring:nth-child(1) { width: 170px; height: 170px; background: rgba(200,200,200,0.2);  animation: pulse1 1.6s ease-in-out infinite 0s; }
+    .voice-waveform-ring:nth-child(2) { width: 142px; height: 142px; background: rgba(185,185,185,0.4);  animation: pulse2 1.6s ease-in-out infinite 0.15s; }
+    .voice-waveform-ring:nth-child(3) { width: 114px; height: 114px; background: rgba(170,170,170,0.55); animation: pulse3 1.6s ease-in-out infinite 0.3s; }
+    .voice-waveform-ring:nth-child(4) { width: 78px;  height: 78px;  background: rgba(155,155,155,0.7);  animation: pulse4 1.6s ease-in-out infinite 0.45s; }
+    .voice-waveform-ring:nth-child(5) { width: 40px;  height: 40px;  background: rgba(140,140,140,0.85); animation: pulse5 1.6s ease-in-out infinite 0.6s; }
+    .voice-waveform.recording .voice-waveform-ring:nth-child(1) { background: rgba(82,151,109,0.12); }
+    .voice-waveform.recording .voice-waveform-ring:nth-child(2) { background: rgba(82,151,109,0.22); }
+    .voice-waveform.recording .voice-waveform-ring:nth-child(3) { background: rgba(82,151,109,0.36); }
+    .voice-waveform.recording .voice-waveform-ring:nth-child(4) { background: rgba(82,151,109,0.52); }
+    .voice-waveform.recording .voice-waveform-ring:nth-child(5) { background: rgba(82,151,109,0.68); }
+
+    .voice-countdown-overlay { display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 10; flex-direction: column; align-items: center; justify-content: center; }
+    .voice-countdown-overlay.active { display: flex; }
+    .voice-countdown-num { font-size: 100px; font-weight: 800; color: #2f6c46; line-height: 1; letter-spacing: -4px; animation: countPop 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+
+    .voice-guide-label { font-size: 15px; font-weight: 400; color: #2f6c46; line-height: 1.6; text-align: center; margin: 10px 0 5px;}
+    .voice-sentence-wrap { position: relative; text-align: center; }
+    .voice-sentence-base { font-size: 20px; font-weight: 700; color: #111; line-height: 1.5; text-align: center; word-break: keep-all; }
+    .voice-sentence-fill { font-size: 20px; font-weight: 700; line-height: 1.5; text-align: center; word-break: keep-all; }
+    .voice-sentence-fill .char { color: #ccc; transition: color 0.4s ease-in-out; display: inline; }
+    .voice-sentence-fill .char.lit { color: #111; }
+
+    .voice-page-indicator { display: inline-flex; align-items: center; justify-content: center; padding: 4px 12px; background: #f0f0f0; border-radius: 50px; font-size: 12px; font-weight: 500; color: #888; margin: 10px 0;}
+
+    .voice-mic-wrap { position: fixed; bottom: 64px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; z-index: 50; }
+    @media (max-width: 480px) { .voice-mic-wrap { bottom: 5%; } }
+    @media (min-width: 481px) { .voice-mic-wrap { position: static; transform: none; margin-top: 40px; } }
+
+    .voice-mic-btn {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: linear-gradient(160deg, #4a8f63 0%, #2f6c46 100%);
+      border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 0 10px rgba(47,108,70,0.13), 0 6px 20px rgba(47,108,70,0.35);
+      transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+      -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    }
+    .voice-mic-btn svg { width: 30px; height: 30px; }
+    @media (max-width: 480px) {
+      .voice-mic-btn { width: 92px; height: 92px; box-shadow: 0 0 0 12px rgba(47,108,70,0.13), 0 7px 24px rgba(47,108,70,0.35); }
+      .voice-mic-btn svg { width: 38px !important; height: 38px !important; }
+    }
+    .voice-mic-btn:active:not(:disabled) { transform: scale(0.92) !important; box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important; }
+    @media (hover: hover) { .voice-mic-btn:hover { opacity: 0.88; transform: scale(1.05); } }
+    .voice-mic-btn.counting { background: linear-gradient(160deg, #c0c0c0 0%, #a0a0a0 100%); box-shadow: 0 0 0 10px rgba(0,0,0,0.05), 0 4px 14px rgba(0,0,0,0.12); cursor: not-allowed; }
+    .voice-mic-btn.stop-inactive { background: linear-gradient(160deg, #ccc 0%, #aaa 100%); box-shadow: 0 0 0 10px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.1); cursor: not-allowed; opacity: 0.7; }
+    .voice-mic-btn.stop-active { background: linear-gradient(160deg, #4a8f63 0%, #2f6c46 100%); box-shadow: 0 0 0 10px rgba(47,108,70,0.13), 0 8px 24px rgba(47,108,70,0.4); animation: btnRise 0.3s ease-out; }
+
+    /* ── View 6: 얼굴 녹화 ───────────────────────────────── */
+    .face-record-page { flex-direction: column; background: #fff; }
+    .face-fullscreen-mode .face-record-page { min-height: 100vh; }
+    .face-camera-wrap { width: 100%; aspect-ratio: 3 / 4; background: #000; position: relative; overflow: hidden; flex-shrink: 0; }
+    .face-fullscreen-mode .face-camera-wrap { aspect-ratio: unset; height: 70vh; }
+    .face-camera-feed { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+
+    .face-loading-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: #000; z-index: 2; }
+    .face-loading-title { font-size: 18px; font-weight: 700; color: #fff; }
+    .face-loading-sub   { font-size: 14px; color: rgba(255,255,255,0.6); }
+    .face-spinner-track { stroke: #555; }
+    .face-spinner-arc { stroke: #8CCBA4; stroke-dasharray: 120 180; stroke-dashoffset: 0; animation: spinArc 1.2s linear infinite; transform-origin: center; }
+
+    .face-frame-dim { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+    .face-frame-overlay { position: absolute; inset: 0; align-items: center; justify-content: center; z-index: 3; }
+    .face-frame { width: 65%; aspect-ratio: 3 / 4; position: relative; }
+    .face-frame-corner { position: absolute; width: 28px; height: 28px; border-color: #e53935; border-style: solid; border-width: 0; transition: border-color 0.4s ease; }
+    .face-frame-corner.tl { top: 0; left: 0;     border-top-width: 3px; border-left-width: 3px; }
+    .face-frame-corner.tr { top: 0; right: 0;    border-top-width: 3px; border-right-width: 3px; }
+    .face-frame-corner.bl { bottom: 0; left: 0;  border-bottom-width: 3px; border-left-width: 3px; }
+    .face-frame-corner.br { bottom: 0; right: 0; border-bottom-width: 3px; border-right-width: 3px; }
+    .face-frame.detected .face-frame-corner { border-color: #fff; }
+    .face-frame.face-lost .face-frame-corner { border-color: #f05c44; }
+
+    .face-error-overlay { position: absolute; inset: 0; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: #111; z-index: 2; }
+    .face-error-icon { font-size: 40px; }
+    .face-error-text { font-size: 15px; font-weight: 500; color: #fff; text-align: center; line-height: 1.5; padding: 0 32px; }
+
+    .face-countdown-overlay { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 48px; z-index: 10; background: rgba(0,0,0,0.25); }
+    .face-countdown-overlay.active { display: flex; }
+    .face-countdown-num { font-size: 96px; font-weight: 800; color: #fff; line-height: 1; letter-spacing: -2px; text-shadow: 0 2px 16px rgba(0,0,0,0.4); animation: faceCountPop 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+
+    .face-landmark-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 4; opacity: 0; transition: opacity 0.6s ease; pointer-events: none; transform: scaleX(-1); }
+    .face-landmark-canvas.visible { opacity: 1; }
+
+    .face-measure-timer { position: absolute; top: 14px; right: 16px; z-index: 6; background: rgba(0,0,0,0.45); border-radius: 20px; padding: 5px 12px; font-size: 15px; font-weight: 700; color: #fff; display: none; font-variant-numeric: tabular-nums; }
+    .face-measure-timer.active { display: block; }
+
+    .face-lost-toast { display: none; position: absolute; top: 16px; left: 12px; right: 12px; z-index: 10; background: #f05c44; border-radius: 14px; padding: 14px 16px; flex-direction: row; align-items: flex-start; gap: 10px; }
+    .face-lost-toast.active { display: flex; }
+    .face-lost-toast-icon  { font-size: 18px; color: #fff; flex-shrink: 0; margin-top: 1px; }
+    .face-lost-toast-title { font-size: 14px; font-weight: 700; color: #fff; margin: 0 0 2px; }
+    .face-lost-toast-sub   { font-size: 12px; font-weight: 400; color: rgba(255,255,255,0.85); margin: 0; }
+
+    .face-measure-progress-wrap { position: absolute; bottom: 20px; left: 0; right: 0; z-index: 6; display: none; padding: 0 20px; }
+    .face-measure-progress-wrap.active { display: block; }
+    .face-measure-progress-pct { font-size: 22px; font-weight: 800; color: #fff; text-align: center; padding: 0 0 8px; }
+    .face-measure-progress-track { height: 12px; background: rgba(255,255,255,0.35); width: 100%; border-radius: 100px; overflow: hidden; }
+    .face-measure-progress-fill { height: 12px; background: linear-gradient(to right, #1a9147, #6dcf96); width: 0%; border-radius: 100px; transition: width 1s linear, background 0.3s; }
+    .face-measure-progress-wrap.face-lost .face-measure-progress-fill { background: linear-gradient(to right, #d93a22, #f07c66); }
+    .face-measure-progress-wrap.face-lost .face-measure-progress-pct  { color: #f05c44; }
+
+    .face-bottom-body { padding: 32px 24px 0; display: flex; flex-direction: column; align-items: center; flex: 1; }
+    .face-bottom-label { font-size: 18px; font-weight: 700; color: #2f6c46; text-align: center; line-height: 1.4; margin: 0 0 8px; }
+    .face-bottom-text { font-size: 15px; font-weight: 400; color: #555; text-align: center; line-height: 1.6; margin: 0; }
+
+    /* ── 분석 중 오버레이 ─────────────────────────────────── */
+    .analyzing-overlay { display: none; position: absolute; inset: 0; background: #fff; z-index: 200; flex-direction: column; align-items: center; justify-content: flex-start; padding: 72px 24px 40px; }
+    .analyzing-overlay.active { display: flex; }
+    .analyzing-title { font-size: 17px; font-weight: 500; color: #333; text-align: center; line-height: 1.5; letter-spacing: -0.4px; margin: 0 0 48px; }
+    .analyzing-canvas-wrap { position: relative; width: 320px; height: 320px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .analyzing-spin-img { width: 287px; height: 287px; display: block; animation: analyzingSpin 5s linear infinite; transform-origin: center center; }
+    .analyzing-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 56px; font-weight: 800; color: #2F6C46; pointer-events: none; }
+
+    /* ── 측정 결과 오버레이 ───────────────────────────────── */
+    .result-overlay { display: none; position: absolute; top: 0; left: 0; right: 0; min-height: 100%; background: #fff; z-index: 200; }
+    .result-overlay.active { display: block; }
+    .result-scroll { padding: 32px 20px 40px; }
+    .result-header { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 0; margin-bottom: calc(44px + 4%); }
+    .result-title  { font-size: 20px; font-weight: 600; color: #111; line-height: 1.3; margin: 0; }
+    .result-date-wrap { text-align: right; }
+    .result-date-label { font-size: 12px; color: #aaa; margin: 0 0 2px; }
+    .result-date       { font-size: 14px; font-weight: 600; color: #555; margin: 0; }
+    .result-gauge-section { display: flex; justify-content: center; margin-bottom: 16px; }
+    .result-gauge-score-row { opacity: 1; }
+    .result-desc-box { background: #f4f7f5; border-radius: 14px; padding: 16px 18px; margin-bottom: 28px; }
+    .result-desc-text { font-size: 15px; color: #444; line-height: 1.5; margin: 0; }
+    .result-metrics { display: flex; flex-direction: column; gap: 40px; margin-bottom: 28px; }
+    .result-metric-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .result-metric-name   { font-size: 15px; font-weight: 400; color: #333; line-height: 140%; }
+    .result-metric-right  { display: flex; align-items: center; gap: 8px; }
+    .result-metric-status { font-size: 15px; font-weight: 600; color: #111; line-height: 140%; text-align: right; }
+    .result-metric-badge  { display: flex; justify-content: center; align-items: center; font-size: 12px; font-weight: 500; line-height: 150%; padding: 4px 10px; border-radius: 20px; }
+    .result-metric-badge.caution { background: #fef3c7; color: #F59E0B; }
+    .result-metric-badge.good    { background: #d6f0ff; color: #0099cc; }
+    .result-metric-bar-track { height: 9px; background: #ebebeb; border-radius: 100px; overflow: hidden; margin-bottom: 6px; }
+    .result-metric-bar-fill  { height: 9px; border-radius: 100px; width: 0%; transition: width 1s cubic-bezier(0.22, 1, 0.36, 1); }
+    .result-metric-bar-fill.stress     { background: linear-gradient(to right, #f5d050, #f5a623); }
+    .result-metric-bar-fill.anxiety    { background: linear-gradient(to right, #74d7e8, #11b4c8); }
+    .result-metric-bar-fill.depression { background: linear-gradient(to right, #74d7e8, #11b4c8); }
+    .result-metric-ticks { display: flex; justify-content: space-between; font-size: 10px; color: rgba(170,170,170,0.80); padding: 0 2px; }
+    .result-note { font-size: 13px; color: #aaa; text-align: center; margin: 0 0 calc(30px + 2%); }
+
+    /* ── 측정 중단 팝업 ───────────────────────────────────── */
+    .measure-exit-dim { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; }
+    .measure-exit-dim.active { display: flex; }
+    .measure-exit-modal { background: #fff; border-radius: 24px; padding: 28px 24px 24px; width: calc(100% - 48px); max-width: 380px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .measure-exit-title { font-size: 20px; font-weight: 700; color: #111; text-align: center; line-height: 1.4; margin: 0; }
+    .measure-exit-desc  { font-size: 15px; font-weight: 400; color: #666; text-align: center; line-height: 1.6; margin: 0 0 4px; }
+    .measure-exit-btns  { display: flex; gap: 12px; width: 100%; }
+    .measure-exit-btn-keep { display: flex; align-items: center; justify-content: center; gap: 4px; flex: 1 0 0; padding: 16px; border: none; border-radius: 12px; background: #eeeeee; font-family: Pretendard, inherit; font-size: 15px; font-weight: 600; line-height: 1.4; color: #333; cursor: pointer; transition: background 0.2s ease; }
+    .measure-exit-btn-leave { display: flex; align-items: center; justify-content: center; gap: 4px; flex: 1 0 0; padding: 16px; border: none; border-radius: 12px; background: #e53935; font-family: Pretendard, inherit; font-size: 15px; font-weight: 600; line-height: 1.4; color: #fff; cursor: pointer; transition: background 0.2s ease; }
+    @media (hover: hover) { .measure-exit-btn-keep:hover { background: #e4e4e4; } .measure-exit-btn-leave:hover { background: #c62828; } }
+
+    /* Helper display classes */
+    .d-flex { display: flex; }
+    .d-none { display: none; }
+  </style>
+</head>
+<body>
+  <div class="ai-mental-care-root" id="root">
+
+    <!-- ── View 1: 게이지 ── -->
+    <div class="ai-view-gauge" id="view-gauge">
+      <div class="ai-section">
+        <p class="ai-title">지금 홍길동 님의<br />마음은 어떤 상태일까요?</p>
+        <div class="ai-gauge-wrap">
+          <div class="ai-gauge-container">
+            <div class="ai-gauge-outer-ring"></div>
+            <div class="ai-gauge-bg-circle"></div>
+            <svg class="ai-gauge-svg" viewBox="0 0 270 270" style="transform: rotate(-90deg);">
+              <defs>
+                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#8fc4a8" />
+                  <stop offset="100%" stop-color="#2f6c46" />
+                </linearGradient>
+              </defs>
+              <circle cx="135" cy="135" r="116" fill="none" stroke="url(#gaugeGradient)"
+                stroke-width="17" stroke-linecap="round" stroke-dasharray="547 729" stroke-dashoffset="547"
+                class="ai-gauge-arc" />
+            </svg>
+            <div class="ai-gauge-inner">
+              <span class="ai-gauge-label">마음 건강 상태</span>
+              <div class="ai-gauge-score-row">
+                <span class="ai-gauge-score">?</span>
+                <span class="ai-gauge-unit">점</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="ai-desc-card">
+          <p class="ai-desc-text">표정과 목소리 톤을 분석해 지금 마음 상태를 읽어드려요. 카메라와 마이크만 있으면 되고, 복잡한 준비 없이 약 3분이면 충분해요. 검사가 끝나면 내 마음 상태를 수치로 확인할 수 있어요.</p>
+        </div>
+        <div style="flex: 1; min-height: 24px;"></div>
+      </div>
+      <div class="ai-bottom-wrap">
+        <button class="bottom-btn" onclick="goTo('guide')">지금 바로 측정하기</button>
+      </div>
+    </div>
+
+    <!-- ── View 2: 측정 안내 ── -->
+    <div class="ai-view-guide d-none" id="view-guide">
+      <div class="ai-guide-section">
+        <p class="ai-guide-title">마음 상태 분석 안내</p>
+        <p class="ai-guide-desc">마음 상태를 더 깊이 이해하기 위해,
+음성과 얼굴 데이터를 두 단계에 걸쳐 수집해요.</p>
+        <div class="ai-step-cards">
+          <div class="ai-step-card">
+            <div class="ai-step-card-title">
+              <span class="ai-step-emoji">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.5625 6.1875C7.5625 5.27582 7.92466 4.40148 8.56932 3.75682C9.21398 3.11216 10.0883 2.75 11 2.75C11.9117 2.75 12.786 3.11216 13.4307 3.75682C14.0753 4.40148 14.4375 5.27582 14.4375 6.1875V11C14.4375 11.9117 14.0753 12.786 13.4307 13.4307C12.786 14.0753 11.9117 14.4375 11 14.4375C10.0883 14.4375 9.21398 14.0753 8.56932 13.4307C7.92466 12.786 7.5625 11.9117 7.5625 11V6.1875ZM11 4.125C10.453 4.125 9.92839 4.3423 9.54159 4.72909C9.1548 5.11589 8.9375 5.64049 8.9375 6.1875V11C8.9375 11.547 9.1548 12.0716 9.54159 12.4584C9.92839 12.8452 10.453 13.0625 11 13.0625C11.547 13.0625 12.0716 12.8452 12.4584 12.4584C12.8452 12.0716 13.0625 11.547 13.0625 11V6.1875C13.0625 5.64049 12.8452 5.11589 12.4584 4.72909C12.0716 4.3423 11.547 4.125 11 4.125Z" fill="#2F6C46"/><path d="M5.5 10.3125C5.68234 10.3125 5.8572 10.3849 5.98614 10.5139C6.11507 10.6428 6.1875 10.8177 6.1875 11C6.1875 12.2764 6.69453 13.5004 7.59705 14.403C8.49957 15.3055 9.72365 15.8125 11 15.8125C12.2764 15.8125 13.5004 15.3055 14.403 14.403C15.3055 13.5004 15.8125 12.2764 15.8125 11C15.8125 10.8177 15.8849 10.6428 16.0139 10.5139C16.1428 10.3849 16.3177 10.3125 16.5 10.3125C16.6823 10.3125 16.8572 10.3849 16.9861 10.5139C17.1151 10.6428 17.1875 10.8177 17.1875 11C17.1878 12.5222 16.627 13.9911 15.6123 15.1257C14.5976 16.2604 13.2003 16.9812 11.6875 17.1504V18.5625C11.6875 18.7448 11.6151 18.9197 11.4861 19.0486C11.3572 19.1776 11.1823 19.25 11 19.25C10.8177 19.25 10.6428 19.1776 10.5139 19.0486C10.3849 18.9197 10.3125 18.7448 10.3125 18.5625V17.1504C8.79974 16.9812 7.4024 16.2604 6.38771 15.1257C5.37303 13.9911 4.81221 12.5222 4.8125 11C4.8125 10.8177 4.88493 10.6428 5.01386 10.5139C5.1428 10.3849 5.31766 10.3125 5.5 10.3125Z" fill="#2F6C46"/></svg>
+              </span>
+              <span class="ai-step-title-text">1단계: 음성 측정</span>
+            </div>
+            <div class="ai-guide-bullets">
+              <p class="ai-guide-bullet">조용한 공간에서 4개의 문장을 따라 읽어주세요.</p>
+              <p class="ai-guide-bullet">평소 말하는 속도를 유지해 주세요.</p>
+            </div>
+          </div>
+          <div class="ai-step-card">
+            <div class="ai-step-card-title">
+              <span class="ai-step-emoji">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11.0014 17.875C9.08249 17.875 7.4567 17.2091 6.12402 15.8774C4.79134 14.5456 4.125 12.9203 4.125 11.0014C4.125 9.08249 4.79088 7.4567 6.12265 6.12402C7.45441 4.79134 9.07974 4.125 10.9986 4.125C12.9175 4.125 14.5433 4.79088 15.876 6.12265C17.2087 7.45441 17.875 9.07974 17.875 10.9986C17.875 12.9175 17.2091 14.5433 15.8774 15.876C14.5456 17.2087 12.9203 17.875 11.0014 17.875ZM11 16.5C12.5278 16.5 13.8264 15.9653 14.8958 14.8958C15.9653 13.8264 16.5 12.5278 16.5 11C16.5 10.7372 16.4809 10.4783 16.4427 10.2234C16.4045 9.96837 16.3472 9.7172 16.2708 9.46985C16.0359 9.52165 15.8 9.56045 15.5634 9.58627C15.3269 9.61209 15.0904 9.625 14.8539 9.625C13.8605 9.625 12.9182 9.42547 12.0269 9.02642C11.1354 8.62751 10.3518 8.05903 9.6761 7.32096C9.27185 8.19775 8.70864 8.96133 7.98646 9.61171C7.26428 10.2622 6.43546 10.7385 5.5 11.0406C5.52826 12.5495 6.07475 13.8367 7.13946 14.902C8.20417 15.9673 9.49101 16.5 11 16.5Z" fill="#2F6C46"/><path d="M1.375 4.8125V3.0321C1.375 2.56903 1.53542 2.17708 1.85625 1.85625C2.17708 1.53542 2.56903 1.375 3.0321 1.375H4.8125C5.00729 1.375 5.17061 1.44092 5.30246 1.57277C5.43415 1.70462 5.5 1.86794 5.5 2.06273C5.5 2.25767 5.43415 2.42092 5.30246 2.55246C5.17061 2.68415 5.00729 2.75 4.8125 2.75H3.0321C2.96152 2.75 2.8969 2.77941 2.83823 2.83823C2.77941 2.8969 2.75 2.96152 2.75 3.0321V4.8125C2.75 5.00729 2.68408 5.17061 2.55223 5.30246C2.42038 5.43415 2.25706 5.5 2.06227 5.5C1.86733 5.5 1.70408 5.43415 1.57254 5.30246C1.44085 5.17061 1.375 5.00729 1.375 4.8125ZM4.8125 20.625H3.0321C2.56903 20.625 2.17708 20.4646 1.85625 20.1438C1.53542 19.8229 1.375 19.431 1.375 18.9679V17.1875C1.375 16.9927 1.44092 16.8294 1.57277 16.6975C1.70462 16.5658 1.86794 16.5 2.06273 16.5C2.25767 16.5 2.42092 16.5658 2.55246 16.6975C2.68415 16.8294 2.75 16.9927 2.75 17.1875V18.9679C2.75 19.0385 2.77941 19.1031 2.83823 19.1618C2.8969 19.2206 2.96152 19.25 3.0321 19.25H4.8125C5.00729 19.25 5.17061 19.3159 5.30246 19.4478C5.43415 19.5796 5.5 19.7429 5.5 19.9377C5.5 20.1327 5.43415 20.2959 5.30246 20.4275C5.17061 20.5592 5.00729 20.625 4.8125 20.625ZM18.9679 20.625H17.1875C16.9927 20.625 16.8294 20.5591 16.6975 20.4272C16.5658 20.2954 16.5 20.1321 16.5 19.9373C16.5 19.7423 16.5658 19.5791 16.6975 19.4475C16.8294 19.3158 16.9927 19.25 17.1875 19.25H18.9679C19.0385 19.25 19.1031 19.2206 19.1618 19.1618C19.2206 19.1031 19.25 19.0385 19.25 18.9679V16.5H20.625V18.9679C20.625 19.431 20.4646 19.8229 20.1438 20.1438C19.8229 20.4646 19.431 20.625 18.9679 20.625ZM19.25 4.8125V3.0321C19.25 2.96152 19.2206 2.8969 19.1618 2.83823C19.1031 2.77941 19.0385 2.75 18.9679 2.75H17.1875C16.9927 2.75 16.8294 2.68408 16.6975 2.55223C16.5658 2.42038 16.5 2.25706 16.5 2.06227C16.5 1.86733 16.5658 1.70408 16.6975 1.57254C16.8294 1.44085 16.9927 1.375 17.1875 1.375H18.9679C19.431 1.375 19.8229 1.53542 20.1438 1.85625C20.4646 2.17708 20.625 2.56903 20.625 3.0321V4.8125C20.625 5.00729 20.5591 5.17061 20.4272 5.30246C20.2954 5.43415 20.1321 5.5 19.9373 5.5C19.7423 5.5 19.5791 5.43415 19.4475 5.30246C19.3158 5.17061 19.25 5.00729 19.25 4.8125Z" fill="#2F6C46"/></svg>
+              </span>
+              <span class="ai-step-title-text">2단계: 얼굴 측정</span>
+            </div>
+            <div class="ai-guide-bullets">
+              <p class="ai-guide-bullet">정면을 바라보며 약 30초간 유지해 주세요.</p>
+              <p class="ai-guide-bullet">표정이나 자세는 자연스러우면 좋아요.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ai-bottom-wrap">
+        <p class="ai-permission-text">서비스 이용을 위해 <strong>카메라와 마이크 접근 허용</strong>이 필요해요.</p>
+        <button class="bottom-btn" onclick="showVoiceGuide()">다음</button>
+      </div>
+    </div>
+
+    <!-- ── View 3: 음성 안내 ── -->
+    <div class="voice-guide-page d-none" id="view-voice-guide" style="display:none;">
+      <div class="voice-guide-hero">
+        <div id="voiceLottieContainer" class="voice-guide-lottie"></div>
+      </div>
+      <div class="voice-guide-body">
+        <p class="voice-guide-text">지금부터 총 4개의 문장을 읽을 거예요.<br />아래 버튼을 눌러 녹음을 시작한 뒤,<br />문장이 보이면 한 문장씩 천천히 읽어주세요.</p>
+      </div>
+      <div class="ai-bottom-wrap">
+        <button class="bottom-btn" onclick="showVoiceRecord()">측정 시작하기</button>
+      </div>
+    </div>
+
+    <!-- ── View 4: 음성 녹음 ── -->
+    <div class="voice-record-page d-none" id="view-voice-record" style="display:none;">
+      <div class="voice-record-body">
+        <div style="position: relative; width: 170px; height: 170px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; flex-shrink: 0;">
+          <div class="voice-waveform" id="voiceWaveform">
+            <div class="voice-waveform-ring"></div>
+            <div class="voice-waveform-ring"></div>
+            <div class="voice-waveform-ring"></div>
+            <div class="voice-waveform-ring"></div>
+            <div class="voice-waveform-ring"></div>
+          </div>
+          <div class="voice-countdown-overlay" id="voiceCountdown">
+            <span class="voice-countdown-num" id="voiceCountdownNum">3</span>
+          </div>
+        </div>
+
+        <p class="voice-guide-label" id="voiceGuideLabel">녹음하기 버튼을 누른 후,<br />아래 문장을 따라 읽어주세요.</p>
+
+        <div class="voice-sentence-wrap">
+          <p class="voice-sentence-base" id="sentenceBase"></p>
+          <p class="voice-sentence-fill" id="sentenceFill" style="display:none;"></p>
+        </div>
+
+        <span class="voice-page-indicator" id="pageIndicator">1 / 4</span>
+
+        <div class="voice-mic-wrap">
+          <button class="voice-mic-btn" id="micBtn" onclick="handleMicBtn()">
+            <svg id="micIconMic" viewBox="0 0 24 24" fill="none">
+              <path d="M12 1C10.3431 1 9 2.34315 9 4V12C9 13.6569 10.3431 15 12 15C13.6569 15 15 13.6569 15 12V4C15 2.34315 13.6569 1 12 1Z" fill="white" />
+              <path d="M6 10C6 9.44772 5.55228 9 5 9C4.44772 9 4 9.44772 4 10C4 13.866 7.13401 17 11 17V20H9C8.44772 20 8 20.4477 8 21C8 21.5523 8.44772 22 9 22H15C15.5523 22 16 21.5523 16 21C16 20.4477 15.5523 20 15 20H13V17C16.866 17 20 13.866 20 10C20 9.44772 19.5523 9 19 9C18.4477 9 18 9.44772 18 10C18 12.7614 15.7614 15 13 15H11C8.23858 15 6 12.7614 6 10Z" fill="white" />
+            </svg>
+            <svg id="micIconStop" viewBox="0 0 24 24" fill="none" style="display:none;">
+              <rect x="6" y="6" width="12" height="12" rx="2" fill="white" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── View 5: 얼굴 안내 ── -->
+    <div class="voice-guide-page d-none" id="view-face-guide" style="display:none;">
+      <div class="voice-guide-hero">
+        <div id="faceLottieContainer" class="voice-guide-lottie"></div>
+      </div>
+      <div class="voice-guide-body">
+        <p class="voice-guide-text">얼굴에 흐르는 미세한 생체 신호를 분석해<br />심장 박동 변화량(HRV)을 측정합니다.<br />프레임에 얼굴을 맞춘 뒤,<br />약 30초 동안 편안하게 바라봐주세요.</p>
+      </div>
+      <div class="ai-bottom-wrap">
+        <p class="ai-permission-text">🔒 카메라를 통해 측정된 모든 정보는 안전하게 보호됩니다</p>
+        <button class="bottom-btn" onclick="startFaceRecord()">얼굴 측정 시작하기</button>
+      </div>
+    </div>
+
+    <!-- ── View 6: 얼굴 녹화 ── -->
+    <div class="face-record-page d-none" id="view-face-record" style="display:none;">
+      <div id="cameraWrap" class="face-camera-wrap">
+        <video id="faceVideo" class="face-camera-feed" autoplay playsinline muted style="display:none;"></video>
+
+        <div class="face-loading-overlay" id="faceLoading">
+          <svg width="56" height="56" viewBox="0 0 56 56">
+            <circle class="face-spinner-track" cx="28" cy="28" r="22" fill="none" stroke-width="4" />
+            <circle class="face-spinner-arc" cx="28" cy="28" r="22" fill="none" stroke-width="4"
+              stroke-linecap="round" transform="rotate(-90 28 28)" />
+          </svg>
+          <p class="face-loading-title">카메라를 준비하고 있어요</p>
+          <p class="face-loading-sub">잠시만 기다려 주세요</p>
+        </div>
+
+        <div class="face-frame-dim" id="faceDim" style="display:none;">
+          <div id="dimTop"    style="position:absolute;top:0;left:0;right:0;background:rgba(0,0,0,0.50);"></div>
+          <div id="dimBottom" style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.50);"></div>
+          <div id="dimLeft"   style="position:absolute;background:rgba(0,0,0,0.50);"></div>
+          <div id="dimRight"  style="position:absolute;background:rgba(0,0,0,0.50);"></div>
+        </div>
+
+        <div class="face-frame-overlay" id="faceFrameOverlay" style="display:none;">
+          <div class="face-frame" id="faceFrame">
+            <div class="face-frame-corner tl"></div>
+            <div class="face-frame-corner tr"></div>
+            <div class="face-frame-corner bl"></div>
+            <div class="face-frame-corner br"></div>
+          </div>
+        </div>
+
+        <div class="face-error-overlay" id="faceError" style="display:none;">
+          <div class="face-error-icon">📷</div>
+          <p class="face-error-text" id="faceErrorText"></p>
+        </div>
+
+        <div class="face-countdown-overlay" id="faceCountdown">
+          <span class="face-countdown-num" id="faceCountdownNum">3</span>
+        </div>
+
+        <canvas id="faceCanvas" class="face-landmark-canvas"></canvas>
+        <div class="face-measure-timer" id="faceTimer">00:30</div>
+
+        <div class="face-lost-toast" id="faceLostToast">
+          <span class="face-lost-toast-icon">⚠️</span>
+          <div>
+            <p class="face-lost-toast-title">얼굴 인식이 끊겼어요</p>
+            <p class="face-lost-toast-sub">프레임 안에 얼굴을 다시 맞춰주세요</p>
+          </div>
+        </div>
+
+        <div class="face-measure-progress-wrap" id="faceProgress">
+          <div class="face-measure-progress-pct" id="faceProgressPct">0%</div>
+          <div class="face-measure-progress-track">
+            <div class="face-measure-progress-fill" id="faceProgressFill"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="face-bottom-body">
+        <p class="face-bottom-label" id="faceBottomLabel">얼굴을 프레임 안에 맞춰주세요</p>
+        <p class="face-bottom-text" id="faceBottomSub">하단 시작하기 버튼을 눌러주세요.</p>
+        <div style="flex:1; min-height:16px;"></div>
+      </div>
+      <div class="ai-bottom-wrap">
+        <button class="bottom-btn" id="faceStartBtn" onclick="handleFaceStart()" style="opacity:0.3;cursor:not-allowed;pointer-events:none;">시작하기</button>
+      </div>
+    </div>
+
+    <!-- ── 분석 중 오버레이 ── -->
+    <div class="analyzing-overlay" id="analyzingOverlay">
+      <p class="analyzing-title">측정 결과를 분석 중이에요.<br />잠시만 기다려주세요.</p>
+      <div class="analyzing-canvas-wrap">
+        <img class="analyzing-spin-img" src="./loading_img.svg" alt="분석 중" />
+        <div class="analyzing-pct" id="analyzingPct">0%</div>
+      </div>
+    </div>
+
+    <!-- ── 측정 결과 오버레이 ── -->
+    <div class="result-overlay" id="resultOverlay">
+      <div class="result-scroll">
+        <div class="result-header">
+          <div>
+            <p class="result-title">홍길동님의<br />마음 측정 결과</p>
+          </div>
+          <div class="result-date-wrap">
+            <p class="result-date-label">최근 측정일</p>
+            <p class="result-date" id="resultDate"></p>
+          </div>
+        </div>
+        <div class="result-gauge-section">
+          <div class="ai-gauge-wrap">
+            <div class="ai-gauge-container">
+              <div class="ai-gauge-outer-ring"></div>
+              <div class="ai-gauge-bg-circle"></div>
+              <svg class="ai-gauge-svg" viewBox="0 0 270 270" style="transform: rotate(-90deg);">
+                <defs>
+                  <linearGradient id="resultGaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#8fc4a8" />
+                    <stop offset="100%" stop-color="#2f6c46" />
+                  </linearGradient>
+                </defs>
+                <circle id="resultGaugeCircle" cx="135" cy="135" r="116" fill="none" stroke="url(#resultGaugeGradient)"
+                  stroke-width="17" stroke-linecap="round" stroke-dasharray="547 729" stroke-dashoffset="547" />
+              </svg>
+              <div class="ai-gauge-inner">
+                <span class="ai-gauge-label">마음 건강 상태</span>
+                <div class="ai-gauge-score-row result-gauge-score-row">
+                  <span class="ai-gauge-score" id="resultScore">0</span>
+                  <span class="ai-gauge-unit">점</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="result-desc-box">
+          <p class="result-desc-text">현재 전반적으로 마음 건강이 좋은 상태예요. 다만 스트레스 지표가 다소 낮게 나타나, 휴식과 긴장 완화에 신경 써주세요.</p>
+        </div>
+        <div class="result-metrics">
+          <div class="result-metric-item">
+            <div class="result-metric-header">
+              <span class="result-metric-name">스트레스</span>
+              <div class="result-metric-right">
+                <span class="result-metric-status">긴장 완화 필요</span>
+                <span class="result-metric-badge caution">주의</span>
+              </div>
+            </div>
+            <div class="result-metric-bar-track">
+              <div class="result-metric-bar-fill stress" id="barStress"></div>
+            </div>
+            <div class="result-metric-ticks"><span>0</span><span>50</span><span>100</span></div>
+          </div>
+          <div class="result-metric-item">
+            <div class="result-metric-header">
+              <span class="result-metric-name">불안</span>
+              <div class="result-metric-right">
+                <span class="result-metric-status">차분함 유지 중</span>
+                <span class="result-metric-badge good">양호</span>
+              </div>
+            </div>
+            <div class="result-metric-bar-track">
+              <div class="result-metric-bar-fill anxiety" id="barAnxiety"></div>
+            </div>
+            <div class="result-metric-ticks"><span>0</span><span>50</span><span>100</span></div>
+          </div>
+          <div class="result-metric-item">
+            <div class="result-metric-header">
+              <span class="result-metric-name">우울</span>
+              <div class="result-metric-right">
+                <span class="result-metric-status">비교적 활기참</span>
+                <span class="result-metric-badge good">양호</span>
+              </div>
+            </div>
+            <div class="result-metric-bar-track">
+              <div class="result-metric-bar-fill depression" id="barDepression"></div>
+            </div>
+            <div class="result-metric-ticks"><span>0</span><span>50</span><span>100</span></div>
+          </div>
+        </div>
+        <p class="result-note">ⓘ 점수가 높을수록 좋은 상태를 의미합니다.</p>
+      </div>
+    </div>
+
+    <!-- ── 측정 중단 확인 팝업 ── -->
+    <div class="measure-exit-dim" id="exitModal">
+      <div class="measure-exit-modal">
+        <p class="measure-exit-title">측정이 완료되지 않았어요</p>
+        <p class="measure-exit-desc">지금 화면에서 벗어나면<br />측정 결과가 저장되지 않습니다.</p>
+        <div class="measure-exit-btns">
+          <button class="measure-exit-btn-keep" onclick="handleExitCancel()">계속하기</button>
+          <button class="measure-exit-btn-leave" onclick="handleExitConfirm()">나가기</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /#root -->
+
+  <script>
+    // ── Constants ─────────────────────────────────────────────
+    const SENTENCES = [
+      '쓰다듬어진 듯한 완만함과\n깎아놓은 듯한 뾰족함이 어우러진\n산등성이를 따라 오르다 보면\n절로 감탄을 금할 수가 없게 된다.',
+      '고요한 새벽 공기 속에서\n풀잎 위의 이슬방울이\n아침 햇살을 받아 빛나고 있었다.',
+      '오랜 시간 걸어온 길 위에서\n잠시 멈추어 뒤를 돌아보니\n지나온 발자국들이 고스란히 남아 있었다.',
+      '파란 하늘 아래 펼쳐진 들판에\n바람이 살며시 불어와\n황금빛 벼들이 물결처럼 일렁였다.',
+    ];
+    const FACE_MEASURE_TOTAL = 30;
+
+    // ── State ─────────────────────────────────────────────────
+    let currentView = 'gauge';
+    let isMeasuring = false;
+    let micBtnState = 'mic'; // 'mic' | 'counting' | 'stop-inactive' | 'stop-active'
+    let isRecording = false;
+    let canStop = false;
+    let sentenceIdx = 0;
+    let countdownTimer = null;
+    let fillTimeouts = [];
+    let voiceLottieLoaded = false;
+    let faceLottieLoaded = false;
+    let voiceLottieAnim = null;
+    let faceLottieAnim = null;
+    let faceStream = null;
+    let faceCountdownTimer = null;
+    let faceMeasureRaf = null;
+    let faceDetectionLoop = null;
+    let faceLandmarker = null;
+    let faceDetected = false;
+    let faceMeasuring = false;
+    let faceLost = false;
+    let activeElapsed = 0;
+    let lastTs = null;
+    let landmarkVisible = false;
+    let pendingAction = null;
+
+    // ── DOM helpers ───────────────────────────────────────────
+    const $ = id => document.getElementById(id);
+
+    function showView(name) {
+      const views = ['gauge','guide','voice-guide','voice-record','face-guide','face-record'];
+      views.forEach(v => {
+        const el = $('view-' + v);
+        if (el) el.style.display = (v === name) ? 'flex' : 'none';
+      });
+      currentView = name;
+      window.scrollTo(0, 0);
+    }
+
+    function goTo(name) { showView(name); }
+
+    // ── Navigation ────────────────────────────────────────────
+    function showVoiceGuide() {
+      goTo('voice-guide');
+      if (!voiceLottieLoaded) {
+        voiceLottieLoaded = true;
+        fetch('https://jayohhh123.github.io/kossresults/voiceAnimation.json')
+          .then(r => r.json())
+          .then(data => {
+            const container = $('voiceLottieContainer');
+            if (!container) return;
+            voiceLottieAnim = lottie.loadAnimation({
+              container, renderer: 'svg', loop: true, autoplay: true, animationData: data,
+            });
+          }).catch(() => {});
+      }
+    }
+
+    function showFaceGuideView() {
+      goTo('face-guide');
+      if (!faceLottieLoaded) {
+        faceLottieLoaded = true;
+        fetch('https://jayohhh123.github.io/kossresults/videoNotice.json')
+          .then(r => r.json())
+          .then(data => {
+            const container = $('faceLottieContainer');
+            if (!container) return;
+            faceLottieAnim = lottie.loadAnimation({
+              container, renderer: 'svg', loop: true, autoplay: true, animationData: data,
+            });
+          }).catch(() => {});
+      }
+    }
+
+    function showVoiceRecord() {
+      isMeasuring = true;
+      sentenceIdx = 0;
+      resetVoiceToIdle();
+      goTo('voice-record');
+      renderSentence();
+    }
+
+    // ── Voice logic ───────────────────────────────────────────
+    function renderSentence() {
+      const raw = SENTENCES[sentenceIdx];
+      const base = $('sentenceBase');
+      const fill = $('sentenceFill');
+      if (base) base.innerHTML = raw.split('\n').join('<br>');
+      if (fill) fill.style.display = 'none';
+      base.style.display = 'block';
+      $('pageIndicator').textContent = `${sentenceIdx + 1} / ${SENTENCES.length}`;
+    }
+
+    function resetVoiceToIdle() {
+      isRecording = false;
+      canStop = false;
+      const wf = $('voiceWaveform');
+      if (wf) { wf.style.visibility = 'visible'; wf.classList.remove('recording'); }
+      $('sentenceFill') && ($('sentenceFill').style.display = 'none');
+      $('sentenceBase') && ($('sentenceBase').style.display = 'block');
+      $('voiceCountdown') && $('voiceCountdown').classList.remove('active');
+      setMicState('mic');
+      const lbl = $('voiceGuideLabel');
+      if (lbl) lbl.innerHTML = '녹음하기 버튼을 누른 후,<br />아래 문장을 따라 읽어주세요.';
+    }
+
+    function setMicState(state) {
+      micBtnState = state;
+      const btn = $('micBtn');
+      const iconMic  = $('micIconMic');
+      const iconStop = $('micIconStop');
+      if (!btn) return;
+      btn.className = 'voice-mic-btn';
+      if (state === 'counting')      btn.classList.add('counting');
+      if (state === 'stop-inactive') btn.classList.add('stop-inactive');
+      if (state === 'stop-active')   btn.classList.add('stop-active');
+      btn.disabled = (state === 'counting' || state === 'stop-inactive');
+      const showStop = (state === 'stop-inactive' || state === 'stop-active');
+      if (iconMic)  iconMic.style.display  = showStop ? 'none' : 'block';
+      if (iconStop) iconStop.style.display = showStop ? 'block' : 'none';
+    }
+
+    function handleMicBtn() {
+      if (!isRecording && !countdownTimer) {
+        startCountdown();
+      } else if (isRecording && canStop) {
+        finishCurrentSentence();
+      }
+    }
+
+    function startCountdown() {
+      let count = 3;
+      setMicState('counting');
+      const wf = $('voiceWaveform');
+      if (wf) wf.style.visibility = 'hidden';
+      const cd = $('voiceCountdown');
+      cd && cd.classList.add('active');
+      $('voiceCountdownNum').textContent = '3';
+      const lbl = $('voiceGuideLabel');
+      if (lbl) lbl.innerHTML = `3초 후, 녹음이 시작됩니다.`;
+
+      countdownTimer = setInterval(() => {
+        count--;
+        if (count > 0) {
+          $('voiceCountdownNum').textContent = count;
+          if (lbl) lbl.innerHTML = `${count}초 후, 녹음이 시작됩니다.`;
+        } else {
+          clearInterval(countdownTimer); countdownTimer = null;
+          $('voiceCountdown').classList.remove('active');
+          if (wf) wf.style.visibility = 'visible';
+          beginRecording();
+        }
+      }, 1000);
+    }
+
+    function beginRecording() {
+      isRecording = true;
+      canStop = false;
+      const wf = $('voiceWaveform');
+      if (wf) wf.classList.add('recording');
+      const lbl = $('voiceGuideLabel');
+      if (lbl) lbl.innerHTML = '문장을 모두 읽었다면,<br />녹음 마치기 버튼을 눌러주세요.';
+      $('sentenceBase').style.display = 'none';
+      $('sentenceFill').style.display = 'block';
+      setMicState('stop-inactive');
+      startCharFill();
+    }
+
+    function startCharFill() {
+      const fillEl = $('sentenceFill');
+      if (!fillEl) return;
+      const raw = SENTENCES[sentenceIdx];
+      fillEl.innerHTML = raw.split('').map(ch =>
+        ch === '\n' ? '<br>' : `<span class="char">${ch}</span>`
+      ).join('');
+
+      const chars = fillEl.querySelectorAll('.char');
+      const total = chars.length;
+      fillTimeouts.forEach(t => clearTimeout(t));
+      fillTimeouts = [];
+
+      for (let i = 0; i < total; i++) {
+        const t = setTimeout(() => {
+          if (chars[i]) chars[i].classList.add('lit');
+          if (i === total - 1) {
+            const t2 = setTimeout(() => {
+              canStop = true;
+              setMicState('stop-active');
+            }, 400);
+            fillTimeouts.push(t2);
+          }
+        }, i * 160);
+        fillTimeouts.push(t);
+      }
+    }
+
+    function clearAllTimers() {
+      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+      fillTimeouts.forEach(t => clearTimeout(t));
+      fillTimeouts = [];
+      if (faceCountdownTimer) { clearInterval(faceCountdownTimer); faceCountdownTimer = null; }
+      if (faceMeasureRaf) { cancelAnimationFrame(faceMeasureRaf); faceMeasureRaf = null; }
+    }
+
+    function finishCurrentSentence() {
+      clearAllTimers();
+      isRecording = false;
+      canStop = false;
+      const wf = $('voiceWaveform');
+      if (wf) wf.classList.remove('recording');
+      const nextIdx = sentenceIdx + 1;
+      if (nextIdx < SENTENCES.length) {
+        sentenceIdx = nextIdx;
+        resetVoiceToIdle();
+        renderSentence();
+      } else {
+        resetVoiceToIdle();
+        setTimeout(() => showFaceGuideView(), 400);
+      }
+    }
+
+    // ── Face recording ────────────────────────────────────────
+    async function startFaceRecord() {
+      goTo('face-record');
+      $('root').classList.add('face-fullscreen-mode');
+
+      $('faceLoading').style.display = 'flex';
+      $('faceVideo').style.display = 'none';
+      $('faceDim').style.display = 'none';
+      $('faceFrameOverlay').style.display = 'none';
+      $('faceError').style.display = 'none';
+      $('faceCountdown').classList.remove('active');
+      $('faceLostToast').classList.remove('active');
+      $('faceTimer').classList.remove('active');
+      $('faceProgress').classList.remove('active');
+      $('faceProgressFill').style.width = '0%';
+      $('faceProgressPct').textContent = '0%';
+      $('faceCanvas').classList.remove('visible');
+      $('faceFrame').classList.remove('detected', 'face-lost');
+      $('faceBottomLabel').textContent = '얼굴을 프레임 안에 맞춰주세요';
+      $('faceBottomLabel').style.color = '';
+      $('faceBottomSub').textContent = '하단 시작하기 버튼을 눌러주세요.';
+      $('faceStartBtn').style.opacity = '0.3';
+      $('faceStartBtn').style.cursor = 'not-allowed';
+      $('faceStartBtn').style.pointerEvents = 'none';
+      faceDetected = false; faceMeasuring = false; faceLost = false;
+      activeElapsed = 0; lastTs = null; landmarkVisible = false;
+
+      try {
+        faceStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false,
+        });
+        const video = $('faceVideo');
+        video.srcObject = faceStream;
+        video.onloadedmetadata = async () => {
+          $('faceLoading').style.display = 'none';
+          video.style.display = 'block';
+          $('faceDim').style.display = 'block';
+          $('faceFrameOverlay').style.display = 'flex';
+          requestAnimationFrame(() => updateDimClip());
+          await initFaceDetection(video);
+        };
+      } catch (err) {
+        $('faceLoading').style.display = 'none';
+        let msg = '카메라를 사용할 수 없어요.<br>브라우저 설정에서 카메라 권한을 허용해 주세요.';
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')
+          msg = '카메라 권한이 차단되어 있어요.<br>주소창 왼쪽 자물쇠 아이콘을 눌러<br>카메라 권한을 허용한 후 새로고침해 주세요.';
+        else if (err.name === 'NotFoundError')
+          msg = '카메라를 찾을 수 없어요.<br>카메라가 연결되어 있는지 확인해 주세요.';
+        $('faceErrorText').innerHTML = msg;
+        $('faceError').style.display = 'flex';
+      }
+    }
+
+    function updateDimClip() {
+      const wrap = $('cameraWrap');
+      const frame = $('faceFrame');
+      if (!wrap || !frame) return;
+      const wR = wrap.getBoundingClientRect();
+      const fR = frame.getBoundingClientRect();
+      const top    = Math.round(fR.top - wR.top);
+      const bottom = Math.round(wR.bottom - fR.bottom);
+      const left   = Math.round(fR.left - wR.left);
+      const right  = Math.round(wR.right - fR.right);
+      const fH     = Math.round(fR.height);
+      $('dimTop').style.height    = top + 'px';
+      $('dimBottom').style.height = bottom + 'px';
+      $('dimLeft').style.cssText  = `position:absolute;top:${top}px;left:0;width:${left}px;height:${fH}px;background:rgba(0,0,0,0.50);`;
+      $('dimRight').style.cssText = `position:absolute;top:${top}px;right:0;width:${right}px;height:${fH}px;background:rgba(0,0,0,0.50);`;
+    }
+
+    async function initFaceDetection(video) {
+      if (faceLandmarker) { runFaceLandmarkerLoop(video); return; }
+
+      // ES module로 로드된 MediaPipe가 window에 등록될 때까지 대기 (최대 30초)
+      let attempts = 0;
+      while (!window._FaceLandmarker && attempts < 150) {
+        if (attempts === 0) { const el = document.querySelector('.face-loading-sub'); if (el) el.textContent = 'AI 모듈 다운로드 중...'; }
+        await new Promise(r => setTimeout(r, 200)); attempts++;
+      }
+      if (!window._FaceLandmarker || !window._FilesetResolver) {
+        $('faceErrorText').innerHTML = '얼굴 인식 모듈을 불러올 수 없어요.<br>인터넷 연결을 확인하고 새로고침해 주세요.';
+        $('faceError').style.display = 'flex';
+        return;
+      }
+
+      const create = async (delegate) => {
+        const vision = await window._FilesetResolver.forVisionTasks(
+          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm'
+        );
+        return window._FaceLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+            delegate,
+          },
+          runningMode: 'VIDEO', numFaces: 1,
+          minFaceDetectionConfidence: 0.3, minFacePresenceConfidence: 0.3, minTrackingConfidence: 0.3,
+          outputFaceBlendshapes: false, outputFacialTransformationMatrixes: false,
+        });
+      };
+
+      try {
+        faceLandmarker = await create('GPU');
+      } catch {
+        try {
+          faceLandmarker = await create('CPU');
+        } catch {
+          $('faceErrorText').innerHTML = '얼굴 인식을 시작할 수 없어요.<br>브라우저를 새로고침 후 다시 시도해 주세요.';
+          $('faceError').style.display = 'flex';
+          return;
+        }
+      }
+      runFaceLandmarkerLoop(video);
+    }
+
+    function runFaceLandmarkerLoop(video) {
+      const canvas = $('faceCanvas');
+      const ctx = canvas.getContext('2d');
+      const loop = () => {
+        if (!faceLandmarker) return;
+
+        canvas.width  = video.videoWidth  || video.clientWidth;
+        canvas.height = video.videoHeight || video.clientHeight;
+        let detected = false;
+        try {
+          const result = faceLandmarker.detectForVideo(video, performance.now());
+          if (result.faceLandmarks && result.faceLandmarks.length > 0) {
+            detected = true;
+            drawLandmarks(ctx, result.faceLandmarks[0], canvas.width, canvas.height);
+          } else {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+          }
+        } catch {}
+        onFaceDetectionFrame(detected);
+        faceDetectionLoop = requestAnimationFrame(loop);
+      };
+      faceDetectionLoop = requestAnimationFrame(loop);
+    }
+
+    function drawLandmarks(ctx, landmarks, w, h) {
+      ctx.clearRect(0, 0, w, h);
+      const t = performance.now() / 1000;
+      const pulse = 0.65 + 0.35 * Math.sin(t * Math.PI * 1.25);
+      const conns = window._FaceLandmarker?.FACE_LANDMARKS_TESSELATION || [];
+      ctx.strokeStyle = `rgba(255,255,255,${0.18 * pulse})`; ctx.lineWidth = 0.5; ctx.beginPath();
+      for (const { start, end } of conns) {
+        const s = landmarks[start]; const e = landmarks[end];
+        if (s && e) { ctx.moveTo(s.x * w, s.y * h); ctx.lineTo(e.x * w, e.y * h); }
+      }
+      ctx.stroke();
+      const contour = window._FaceLandmarker?.FACE_LANDMARKS_FACE_OVAL || [];
+      ctx.strokeStyle = `rgba(255,255,255,${0.55 * pulse})`; ctx.lineWidth = 1.2; ctx.beginPath();
+      for (const { start, end } of contour) {
+        const s = landmarks[start]; const e = landmarks[end];
+        if (s && e) { ctx.moveTo(s.x * w, s.y * h); ctx.lineTo(e.x * w, e.y * h); }
+      }
+      ctx.stroke();
+      const keyPts = new Set([1,4,5,6,195,197,0,17,61,291,78,308,33,263,133,362]);
+      for (let i = 0; i < landmarks.length; i++) {
+        const lm = landmarks[i];
+        const wave = 0.5 + 0.5 * Math.sin(t * Math.PI * 1.5 - (i / landmarks.length) * Math.PI * 4);
+        ctx.fillStyle = `rgba(255,255,255,${0.3 + 0.7 * wave})`; ctx.beginPath();
+        ctx.arc(lm.x * w, lm.y * h, keyPts.has(i) ? 1.8 : 0.9, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    function onFaceDetectionFrame(detected) {
+      if (!landmarkVisible && detected) {
+        landmarkVisible = true;
+        $('faceCanvas').classList.add('visible');
+      } else if (landmarkVisible && !detected) {
+        landmarkVisible = false;
+        $('faceCanvas').classList.remove('visible');
+      }
+      if (!faceDetected && detected) {
+        faceDetected = true;
+        $('faceFrame').classList.add('detected');
+        $('faceStartBtn').style.opacity = '';
+        $('faceStartBtn').style.cursor = '';
+        $('faceStartBtn').style.pointerEvents = '';
+        $('faceBottomLabel').textContent = '얼굴이 잘 보여요!';
+        $('faceBottomLabel').style.color = '#2f6c46';
+      } else if (faceDetected && !detected && !faceMeasuring) {
+        faceDetected = false;
+        $('faceFrame').classList.remove('detected');
+        $('faceStartBtn').style.opacity = '0.3';
+        $('faceStartBtn').style.cursor = 'not-allowed';
+        $('faceStartBtn').style.pointerEvents = 'none';
+        $('faceBottomLabel').textContent = '얼굴을 프레임 안에 맞춰주세요';
+        $('faceBottomLabel').style.color = '';
+      }
+      if (faceMeasuring) {
+        if (!detected && !faceLost) {
+          faceLost = true;
+          $('faceFrame').classList.add('face-lost');
+          $('faceLostToast').classList.add('active');
+          $('faceProgress').classList.add('face-lost');
+        } else if (detected && faceLost) {
+          faceLost = false;
+          $('faceFrame').classList.remove('face-lost');
+          $('faceLostToast').classList.remove('active');
+          $('faceProgress').classList.remove('face-lost');
+          $('faceBottomLabel').textContent = '측정 중이에요!';
+          $('faceBottomLabel').style.color = '#2f6c46';
+          $('faceBottomSub').textContent = '지금처럼 화면을 계속 바라보세요.';
+        }
+      }
+    }
+
+    function handleFaceStart() {
+      if (!faceDetected) return;
+      $('faceStartBtn').style.opacity = '0.3';
+      $('faceStartBtn').style.cursor = 'not-allowed';
+      $('faceStartBtn').style.pointerEvents = 'none';
+      startFaceCountdown();
+    }
+
+    function startFaceCountdown() {
+      let count = 3;
+      $('faceCountdown').classList.add('active');
+      $('faceCountdownNum').textContent = '3';
+      $('faceBottomLabel').textContent = `3초 후 측정이 시작됩니다`;
+      faceCountdownTimer = setInterval(() => {
+        count--;
+        if (count > 0) {
+          $('faceCountdownNum').textContent = count;
+          $('faceBottomLabel').textContent = `${count}초 후 측정이 시작됩니다`;
+        } else {
+          clearInterval(faceCountdownTimer); faceCountdownTimer = null;
+          $('faceCountdown').classList.remove('active');
+          beginFaceMeasure();
+        }
+      }, 1000);
+    }
+
+    function beginFaceMeasure() {
+      faceMeasuring = true; activeElapsed = 0; lastTs = null; let shownAlmost = false;
+      $('faceTimer').classList.add('active');
+      $('faceProgress').classList.add('active');
+      $('faceBottomLabel').textContent = '측정 중이에요!';
+      $('faceBottomLabel').style.color = '#2f6c46';
+      $('faceBottomSub').textContent = '지금처럼 화면을 계속 바라보세요.';
+      const total = FACE_MEASURE_TOTAL * 1000;
+      const tick = (ts) => {
+        if (!lastTs) lastTs = ts;
+        const delta = ts - lastTs;
+        lastTs = ts;
+        if (!faceLost) { activeElapsed = Math.min(activeElapsed + delta, total); }
+        const pct = Math.min(activeElapsed / total, 1);
+        const remaining = Math.max(0, Math.ceil((total - activeElapsed) / 1000));
+        const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
+        const ss = String(remaining % 60).padStart(2, '0');
+        $('faceTimer').textContent = `${mm}:${ss}`;
+        $('faceProgressFill').style.width = (pct * 100) + '%';
+        $('faceProgressPct').textContent = Math.round(pct * 100) + '%';
+        if (pct >= 0.8 && !shownAlmost) {
+          shownAlmost = true;
+          $('faceBottomLabel').textContent = '거의 다 됐어요!';
+          $('faceBottomLabel').style.color = '#2f6c46';
+          $('faceBottomSub').textContent = '잠시만 더 화면에 있어주세요.';
+        }
+        if (pct >= 1) { onFaceMeasureComplete(); return; }
+        faceMeasureRaf = requestAnimationFrame(tick);
+      };
+      faceMeasureRaf = requestAnimationFrame(tick);
+    }
+
+    function onFaceMeasureComplete() {
+      $('faceTimer').classList.remove('active');
+      $('faceProgress').classList.remove('active');
+      $('faceCanvas').classList.remove('visible');
+      if (faceDetectionLoop) { cancelAnimationFrame(faceDetectionLoop); faceDetectionLoop = null; }
+      if (faceStream) { faceStream.getTracks().forEach(t => t.stop()); faceStream = null; }
+      const v = $('faceVideo'); if (v) v.srcObject = null;
+      showAnalyzingScreen();
+    }
+
+    // ── Analyzing ─────────────────────────────────────────────
+    function showAnalyzingScreen() {
+      $('analyzingOverlay').classList.add('active');
+      const target = 92; const countDuration = 4000;
+      const startTs = performance.now();
+      let pctFrame;
+      const updateCount = (ts) => {
+        const progress = Math.min((ts - startTs) / countDuration, 1);
+        const eased = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+        $('analyzingPct').textContent = Math.round(eased * target) + '%';
+        if (progress < 1) pctFrame = requestAnimationFrame(updateCount);
+      };
+      pctFrame = requestAnimationFrame(updateCount);
+      setTimeout(() => {
+        cancelAnimationFrame(pctFrame);
+        $('analyzingOverlay').classList.remove('active');
+        showResultScreen();
+      }, 4500);
+    }
+
+    // ── Result ────────────────────────────────────────────────
+    function showResultScreen() {
+      $('root').classList.remove('face-fullscreen-mode');
+      const now = new Date();
+      const days = ['일','월','화','수','목','금','토'];
+      $('resultDate').textContent = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}(${days[now.getDay()]})`;
+      $('resultOverlay').classList.add('active');
+      window.scrollTo(0, 0);
+
+      const SCORE = 75;
+      const targetOffset = 547 - 729 * (SCORE / 100);
+      const duration = 1500;
+      let gaugeStart = null;
+      const drawGauge = (ts) => {
+        if (!gaugeStart) gaugeStart = ts;
+        const t = Math.min((ts - gaugeStart) / duration, 1);
+        const eased = 1 - Math.pow(1 - t, 3);
+        const offset = 547 - eased * (547 - targetOffset);
+        $('resultGaugeCircle').setAttribute('stroke-dashoffset', offset);
+        $('resultScore').textContent = Math.round(eased * SCORE);
+        if (t < 1) requestAnimationFrame(drawGauge);
+        else setTimeout(() => {
+          $('barStress').style.width = '35%';
+          $('barAnxiety').style.width = '65%';
+          $('barDepression').style.width = '70%';
+        }, 0);
+      };
+      requestAnimationFrame(drawGauge);
+    }
+
+    // ── Exit modal ────────────────────────────────────────────
+    function handleExitConfirm() {
+      $('exitModal').classList.remove('active');
+      isMeasuring = false;
+      clearAllTimers();
+      if (faceStream) { faceStream.getTracks().forEach(t => t.stop()); faceStream = null; }
+      if (faceDetectionLoop) { cancelAnimationFrame(faceDetectionLoop); faceDetectionLoop = null; }
+      $('root').classList.remove('face-fullscreen-mode');
+      $('analyzingOverlay').classList.remove('active');
+      $('resultOverlay').classList.remove('active');
+      pendingAction = null;
+      goTo('gauge');
+    }
+
+    function handleExitCancel() {
+      $('exitModal').classList.remove('active');
+      pendingAction = null;
+      window.history.pushState({ measuring: true }, '');
+    }
+
+    // ── Popstate (back button guard) ──────────────────────────
+    window.addEventListener('popstate', () => {
+      if (isMeasuring) {
+        window.history.pushState({ measuring: true }, '');
+        pendingAction = 'back';
+        $('exitModal').classList.add('active');
+      }
+    });
+
+    // ── Init ──────────────────────────────────────────────────
+    showView('gauge');
+  </script>
+</body>
+</html>
